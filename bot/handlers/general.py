@@ -13,6 +13,7 @@ from datetime import datetime
 import os
 import sys
 import textwrap
+import re
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config import DB_PATH
@@ -53,32 +54,51 @@ async def daftar_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("You are already registered! No need to register again.")
         return ConversationHandler.END
         
+    prompt = "1. Please enter your *Full Name*:"
+    context.user_data['last_prompt'] = prompt
     await update.message.reply_text(
         "Let's start the COP member registration.\n"
-        "*(You can cancel anytime by typing /cancel)*\n\n"
-        "1. Please enter your *Full Name*:",
+        "*(You can cancel anytime by typing /cancel)*\n\n" + prompt,
         parse_mode="Markdown"
     )
     return NAME
 
 async def daftar_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['full_name'] = update.message.text.title()
-    await update.message.reply_text("2. Enter your *Codename*:", parse_mode="Markdown")
+    prompt = "2. Enter your *Codename*:"
+    context.user_data['last_prompt'] = prompt
+    await update.message.reply_text(prompt, parse_mode="Markdown")
     return CODENAME
 
 async def daftar_codename(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['codename'] = update.message.text.upper()
-    await update.message.reply_text("3. Enter your *Agent ID*:", parse_mode="Markdown")
+    prompt = "3. Enter your *Agent ID* (Format: COP-0000-XXX):"
+    context.user_data['last_prompt'] = prompt
+    await update.message.reply_text(prompt, parse_mode="Markdown")
     return AGENT_ID
 
 async def daftar_agent_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.user_data['agent_id'] = update.message.text.upper()
-    await update.message.reply_text("4. Enter your *Muse* (face claim):", parse_mode="Markdown")
+    agent_id = update.message.text.upper()
+    
+    if not re.match(r'^COP-\d{4}-[A-Z]{3}$', agent_id):
+        await update.message.reply_text(
+            "❌ Invalid Agent ID format! It must be `COP-0000-XXX` (e.g. COP-0007-VIR).\n\n" + 
+            context.user_data.get('last_prompt', "3. Please enter your *Agent ID*:"),
+            parse_mode="Markdown"
+        )
+        return AGENT_ID
+        
+    context.user_data['agent_id'] = agent_id
+    prompt = "4. Enter your *Muse* (face claim):"
+    context.user_data['last_prompt'] = prompt
+    await update.message.reply_text(prompt, parse_mode="Markdown")
     return MUSE
 
 async def daftar_muse(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['muse'] = update.message.text.upper()
-    await update.message.reply_text("5. Enter your *Date of Birth* (format: DD-MM-YYYY):", parse_mode="Markdown")
+    prompt = "5. Enter your *Date of Birth* (format: DD-MM-YYYY e.g. 15-10-2001):"
+    context.user_data['last_prompt'] = prompt
+    await update.message.reply_text(prompt, parse_mode="Markdown")
     return DOB
 
 async def daftar_dob(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -92,18 +112,22 @@ async def daftar_dob(update: Update, context: ContextTypes.DEFAULT_TYPE):
         current_year = datetime.now().year
         if dob_date.year < 1950 or dob_date.year > current_year - 5:
             await update.message.reply_text(
-                "❌ Impossible birth year. Please enter a valid Date of Birth (format: DD-MM-YYYY):"
+                "❌ Impossible birth year.\n\n" + context.user_data.get('last_prompt', "5. Please enter a valid Date of Birth (format: DD-MM-YYYY e.g. 15-10-2001):"),
+                parse_mode="Markdown"
             )
             return DOB
             
     except ValueError:
         await update.message.reply_text(
-            "❌ Invalid format or non-existent date! Please strictly follow DD-MM-YYYY (e.g., 01-12-2000):"
+            "❌ Invalid format or non-existent date!\n\n" + context.user_data.get('last_prompt', "5. Please strictly follow DD-MM-YYYY (e.g., 15-10-2001):"),
+            parse_mode="Markdown"
         )
         return DOB
 
     context.user_data['dob'] = dob_text
-    await update.message.reply_text("6. Lastly, enter your *Motto* (or type '-' if none):", parse_mode="Markdown")
+    prompt = "6. Lastly, enter your *Motto* (or type '-' if none):"
+    context.user_data['last_prompt'] = prompt
+    await update.message.reply_text(prompt, parse_mode="Markdown")
     return MOTTO
 
 async def daftar_motto(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -146,6 +170,14 @@ async def cancel_daftar(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Registration cancelled.")
     return ConversationHandler.END
 
+async def fallback_daftar(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    # Dipanggil jika user mengetik command apa pun selain /cancel saat sedang mendaftar
+    last_prompt = context.user_data.get('last_prompt', "Please complete your current registration step.")
+    await update.message.reply_text(
+        f"⚠️ You are currently in the middle of registration. Please reply with normal text:\n\n{last_prompt}",
+        parse_mode="Markdown"
+    )
+
 # Konfigurasi handler pendaftaran
 daftar_handler = ConversationHandler(
     entry_points=[CommandHandler('regist', daftar_start)],
@@ -157,7 +189,10 @@ daftar_handler = ConversationHandler(
         DOB: [MessageHandler(filters.TEXT & ~filters.COMMAND, daftar_dob)],
         MOTTO: [MessageHandler(filters.TEXT & ~filters.COMMAND, daftar_motto)],
     },
-    fallbacks=[CommandHandler('cancel', cancel_daftar)]
+    fallbacks=[
+        CommandHandler('cancel', cancel_daftar),
+        MessageHandler(filters.COMMAND, fallback_daftar)
+    ]
 )
 
 # --- PROFIL ---
@@ -281,8 +316,13 @@ async def edit_profile_value(update: Update, context: ContextTypes.DEFAULT_TYPE)
             return EDIT_VALUE
     elif field == "full_name":
         new_value = new_value.title()
-    elif field in ["codename", "agent_id"]:
+    elif field == "codename":
         new_value = new_value.upper()
+    elif field == "agent_id":
+        new_value = new_value.upper()
+        if not re.match(r'^COP-\d{4}-[A-Z]{3}$', new_value):
+            await update.message.reply_text("❌ Invalid format! Must be `COP-0000-XXX` (e.g. COP-0007-VIR). Try again or /cancel:", parse_mode="Markdown")
+            return EDIT_VALUE
     elif field == "motto":
         new_value = new_value if new_value == '-' else (new_value[0].upper() + new_value[1:] if new_value else new_value)
         

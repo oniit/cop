@@ -57,7 +57,7 @@ async def rest_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "🏖️ *Rest Request*\n"
         "*(Type /cancel to abort)*\n\n"
-        "1. Enter the *start date* of your rest (format: DD-MM-YYYY, e.g., 25-10-2024):",
+        "1. Enter the *start date* of your rest (format: DD-MM-YYYY, e.g., 15-10-2027:",
         parse_mode="Markdown"
     )
     return R_START
