@@ -1,0 +1,13 @@
+[Unit]
+Description=COP Telegram Bot Service
+After=network.target
+
+[Service]
+User=administrator
+WorkingDirectory=/home/administrator/tele/cop
+ExecStart=/home/administrator/tele/cop/venv/bin/python /home/administrator/tele/cop/main.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
