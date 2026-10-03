@@ -156,7 +156,7 @@ async def daftar_motto(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
             "✅ *Registration Successful!*\n\n"
             "Welcome to City of Prestige (COP).\n"
-            "Type /profile to view your complete data.",
+            "Type /profile to view your complete data or /edit_profile to edit your data.",
             parse_mode="Markdown"
         )
     except aiosqlite.IntegrityError:

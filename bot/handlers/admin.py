@@ -83,44 +83,67 @@ async def add_poin(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if len(context.args) < 3:
         await update.message.reply_text(
             "⚠️ *Invalid format.*\n"
-            "Usage: `/point <username/Telegram ID> <amount> <reason>`\n"
-            "Example: `/point @vrzdk 10 Evaluasi Mingguan`\n"
+            "Usage: `/point <username/ID...> <amount> <reason>`\n"
+            "Example: `/point @user1 @user2 10 Bonus Mingguan`\n"
             "*(Use negative numbers to deduct points)*",
             parse_mode="Markdown"
         )
         return
         
-    identifier = context.args[0]
-    point_type = 'COP' # Hardcode to COP
-    try:
-        amount = int(context.args[1])
-    except ValueError:
-        await update.message.reply_text("❌ Points amount must be a number.")
-        return
-    reason = " ".join(context.args[2:])
+    identifiers = []
+    amount_index = -1
     
-    target_user = await get_user_by_identifier(identifier)
-    if not target_user:
-        await update.message.reply_text(f"❌ Member with Username/Tele ID '{identifier}' not found.")
+    # Mencari posisi di mana angka (amount) berada
+    for i, arg in enumerate(context.args):
+        try:
+            int(arg) # Jika bisa jadi angka, berarti ini amount
+            amount_index = i
+            break
+        except ValueError:
+            identifiers.append(arg)
+            
+    if amount_index == -1 or amount_index == 0:
+        await update.message.reply_text("❌ Could not find a valid points amount, or no usernames provided.")
         return
         
-    target_id = target_user[0]
-    target_name = target_user[1]
+    amount = int(context.args[amount_index])
+    reason = " ".join(context.args[amount_index+1:])
+    point_type = 'COP'
     issuer_id = update.effective_user.id
     
+    if not reason:
+        await update.message.reply_text("❌ Please provide a reason for adding/deducting points.")
+        return
+        
+    success_names = []
+    not_found = []
+    
     async with aiosqlite.connect(DB_PATH) as db:
-        await db.execute("UPDATE members SET cop_points = cop_points + ? WHERE telegram_id = ?", (amount, target_id))
+        for identifier in identifiers:
+            target_user = await get_user_by_identifier(identifier)
+            if not target_user:
+                not_found.append(identifier)
+                continue
+                
+            target_id = target_user[0]
+            target_name = target_user[1]
             
-        await db.execute("INSERT INTO point_logs (telegram_id, point_type, amount, reason, issued_by) VALUES (?, ?, ?, ?, ?)",
-                         (target_id, point_type, amount, reason, issuer_id))
+            await db.execute("UPDATE members SET cop_points = cop_points + ? WHERE telegram_id = ?", (amount, target_id))
+            await db.execute("INSERT INTO point_logs (telegram_id, point_type, amount, reason, issued_by) VALUES (?, ?, ?, ?, ?)",
+                             (target_id, point_type, amount, reason, issuer_id))
+            success_names.append(f"*{target_name}*")
+            
         await db.commit()
         
     action = "added" if amount > 0 else "deducted"
-    await update.message.reply_text(
-        f"✅ Successfully {action} *{abs(amount)} {point_type} Points* for *{target_name}*.\n"
-        f"📝 Reason: {reason}",
-        parse_mode="Markdown"
-    )
+    msg = ""
+    if success_names:
+        msg += f"✅ Successfully {action} *{abs(amount)} {point_type} Points* for:\n{', '.join(success_names)}\n📝 Reason: {reason}\n\n"
+    if not_found:
+        msg += f"❌ Member(s) not found: {', '.join(not_found)}"
+        
+    if msg:
+        await update.message.reply_text(msg.strip(), parse_mode="Markdown")
 
 # --- COMMAND /dashboard ---
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup

@@ -32,7 +32,7 @@ async def cmd_cop(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         tags = []
         for telegram_id, codename in batch:
-            tags.append(f"[{codename}](tg://user?id={telegram_id})")
+            tags.append(f'<a href="tg://user?id={telegram_id}">{codename}</a>')
             
         tag_str = ", ".join(tags)
         
@@ -41,7 +41,7 @@ async def cmd_cop(update: Update, context: ContextTypes.DEFAULT_TYPE):
             final_msg += f"{message_text}\n\n"
         final_msg += f"📢 {tag_str}"
         
-        await context.bot.send_message(chat_id=chat_id, text=final_msg, parse_mode="Markdown")
+        await context.bot.send_message(chat_id=chat_id, text=final_msg, parse_mode="HTML")
 
 async def cmd_cop_muse(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
