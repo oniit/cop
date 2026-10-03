@@ -46,7 +46,7 @@ async def cmd_cop(update: Update, context: ContextTypes.DEFAULT_TYPE):
             final_msg += f"{message_text}\n\n"
         final_msg += f"📢 {tag_str}"
         
-        await context.bot.send_message(chat_id=chat_id, text=final_msg, parse_mode="HTML")
+        await context.bot.send_message(chat_id=chat_id, text=final_msg, parse_mode="HTML", disable_web_page_preview=True)
 
 async def cmd_cop_muse(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
