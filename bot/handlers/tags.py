@@ -18,7 +18,7 @@ async def cmd_cop(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message_text = " ".join(context.args) if context.args else ""
     
     async with aiosqlite.connect(DB_PATH) as db:
-        async with db.execute("SELECT telegram_id, codename FROM members ORDER BY codename ASC") as cursor:
+        async with db.execute("SELECT telegram_id, username, codename FROM members ORDER BY codename ASC") as cursor:
             members = await cursor.fetchall()
             
     if not members:
@@ -31,8 +31,13 @@ async def cmd_cop(update: Update, context: ContextTypes.DEFAULT_TYPE):
         batch = members[i:i+batch_size]
         
         tags = []
-        for telegram_id, codename in batch:
-            tags.append(f'<a href="tg://user?id={telegram_id}">{codename}</a>')
+        for telegram_id, username, codename in batch:
+            if username and username.strip():
+                # Hapus @ jika ada di awal username
+                clean_uname = username.replace("@", "")
+                tags.append(f'<a href="https://t.me/{clean_uname}">{codename}</a>')
+            else:
+                tags.append(f'<a href="tg://user?id={telegram_id}">{codename}</a>')
             
         tag_str = ", ".join(tags)
         
