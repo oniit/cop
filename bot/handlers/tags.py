@@ -90,7 +90,7 @@ async def cmd_structure(update: Update, context: ContextTypes.DEFAULT_TYPE):
     /structure - balesannya "codename - nama" berdasarkan jabatan
     """
     async with aiosqlite.connect(DB_PATH) as db:
-        async with db.execute("SELECT codename, position FROM members") as cursor:
+        async with db.execute("SELECT codename, position FROM members ORDER BY codename ASC") as cursor:
             members = await cursor.fetchall()
             
     if not members:
