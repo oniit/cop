@@ -12,16 +12,39 @@ logging.basicConfig(
 )
 
 from bot.handlers.general import start, daftar_handler, profil, leaderboard, edit_profile_handler
-from bot.handlers.admin import edit_role, add_poin, dashboard, dashboard_callback
+from bot.handlers.admin import edit_role, add_poin, dashboard, dashboard_callback, cmd_pull, cmd_reload
 from bot.handlers.attendance import open_attendance, close_attendance, active_sessions, attendance_button, reopen_attendance_button, close_attendance_button
 from bot.handlers.rest import rest_handler, sync_rest_status_job, set_active
 from bot.handlers.aia import claim_handler, admin_claim_action, my_claims
 from bot.handlers.tags import cmd_cop, cmd_cop_muse, cmd_cop_profile, cmd_structure
 from telegram.ext import CallbackQueryHandler
+import os
+import json
 
 async def setup(application):
     """Fungsi yang dijalankan otomatis saat bot baru menyala"""
     await init_db()
+    
+    # Cek apakah bot baru saja direstart via /reload
+    if os.path.exists(".restart.json"):
+        try:
+            with open(".restart.json", "r") as f:
+                data = json.load(f)
+            
+            chat_id = data.get("chat_id")
+            message_id = data.get("message_id")
+            
+            if chat_id and message_id:
+                await application.bot.edit_message_text(
+                    chat_id=chat_id,
+                    message_id=message_id,
+                    text="✅ Bot berhasil dimulai ulang (Restarted)."
+                )
+        except Exception as e:
+            print(f"Failed to process .restart.json: {e}")
+        finally:
+            if os.path.exists(".restart.json"):
+                os.remove(".restart.json")
 
 def main():
     application = ApplicationBuilder().token(BOT_TOKEN).post_init(setup).build()
@@ -33,6 +56,11 @@ def main():
     application.add_handler(CommandHandler('leaderboard', leaderboard))
     application.add_handler(CommandHandler('dashboard', dashboard))
     application.add_handler(CommandHandler('active', set_active))
+    
+    # System Commands
+    application.add_handler(CommandHandler('pull', cmd_pull))
+    application.add_handler(CommandHandler('reload', cmd_reload))
+    
     application.add_handler(daftar_handler)
     application.add_handler(edit_profile_handler)
     application.add_handler(rest_handler)

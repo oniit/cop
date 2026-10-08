@@ -415,3 +415,39 @@ async def dashboard_callback(update: Update, context: ContextTypes.DEFAULT_TYPE)
             reply_markup=get_dashboard_main_keyboard(query.from_user.id),
             parse_mode="Markdown"
         )
+
+# --- SYSTEM COMMANDS ---
+async def cmd_pull(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if str(update.effective_user.id) != str(OWNER_ID):
+        await update.message.reply_text("⛔ *Access Denied.* Only Owner can use this command.", parse_mode="Markdown")
+        return
+
+    import subprocess
+    msg = await update.message.reply_text("Sedang menarik pembaruan dari repository...")
+    try:
+        result = subprocess.run(["git", "pull"], capture_output=True, text=True, check=True)
+        output = result.stdout.strip()
+        if not output:
+            output = "Berhasil, namun tidak ada output."
+        await msg.edit_text(f"<pre>{output}</pre>", parse_mode="HTML")
+    except subprocess.CalledProcessError as e:
+        error_output = e.stderr.strip() or e.stdout.strip() or "Terjadi kesalahan yang tidak diketahui."
+        await msg.edit_text(f"Gagal melakukan git pull:\n<pre>{error_output}</pre>", parse_mode="HTML")
+    except Exception as e:
+        await msg.edit_text(f"Terjadi kesalahan sistem:\n<pre>{str(e)}</pre>", parse_mode="HTML")
+
+async def cmd_reload(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if str(update.effective_user.id) != str(OWNER_ID):
+        await update.message.reply_text("⛔ *Access Denied.* Only Owner can use this command.", parse_mode="Markdown")
+        return
+
+    import os, json
+    msg = await update.message.reply_text("Memulai ulang bot...")
+    try:
+        with open(".restart.json", "w") as f:
+            json.dump({"chat_id": msg.chat_id, "message_id": msg.message_id}, f)
+    except Exception as e:
+        print(f"Failed to write .restart.json: {e}")
+    
+    # Ganti 'botcop' dengan nama service systemd Anda
+    os.system("sudo systemctl restart botcop")
