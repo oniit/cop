@@ -197,14 +197,37 @@ daftar_handler = ConversationHandler(
 
 # --- PROFIL ---
 async def profil(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    telegram_id = update.effective_user.id
-    async with aiosqlite.connect(DB_PATH) as db:
-        async with db.execute("SELECT * FROM members WHERE telegram_id = ?", (telegram_id,)) as cursor:
-            user = await cursor.fetchone()
+    requester_id = update.effective_user.id
+    
+    # Jika ada argumen (ingin ngecek profile orang lain)
+    if context.args:
+        from bot.handlers.admin import is_admin
+        if not await is_admin(requester_id):
+            await update.message.reply_text("⛔ *Access Denied.* Only SAC, DAC, and Secretaries can view other members' profiles.", parse_mode="Markdown")
+            return
             
-    if not user:
-        await update.message.reply_text("You are not registered. Type /regist first.")
-        return
+        identifier = context.args[0]
+        identifier_clean = identifier.replace('@', '')
+        
+        async with aiosqlite.connect(DB_PATH) as db:
+            if identifier.isdigit():
+                async with db.execute("SELECT * FROM members WHERE telegram_id = ?", (int(identifier),)) as cursor:
+                    user = await cursor.fetchone()
+            else:
+                async with db.execute("SELECT * FROM members WHERE username = ? OR agent_id = ?", (identifier_clean, identifier_clean)) as cursor:
+                    user = await cursor.fetchone()
+                    
+        if not user:
+            await update.message.reply_text(f"❌ Member '{identifier}' not found.")
+            return
+    else:
+        async with aiosqlite.connect(DB_PATH) as db:
+            async with db.execute("SELECT * FROM members WHERE telegram_id = ?", (requester_id,)) as cursor:
+                user = await cursor.fetchone()
+                
+        if not user:
+            await update.message.reply_text("You are not registered. Type /regist first.")
+            return
         
     # user = (0:telegram_id, 1:username, 2:full_name, 3:codename, 4:agent_id, 5:muse, 6:position, 7:dob, 8:motto, 9:join_date, 10:status, 11:aia_points, 12:cop_points)
     
