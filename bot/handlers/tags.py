@@ -1,4 +1,5 @@
 import aiosqlite
+import html
 from telegram import Update
 from telegram.ext import ContextTypes
 import sys
@@ -187,7 +188,7 @@ async def cmd_structure(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if not pos:
             continue
             
-        formatted_name = f"{codename}"
+        formatted_name = html.escape(codename)
         
         if pos == "sac":
             struct["SAC"].append(formatted_name)
@@ -212,27 +213,24 @@ async def cmd_structure(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 struct["Editor Member"].append(formatted_name)
 
     # Format output sesuai template user
-    msg = ""
+    msg = "📋 <b>Structure City of Prestige</b>\n\n"
     
-    msg += "— SAC: " + (", ".join(struct["SAC"]) if struct["SAC"] else "") + "\n"
-    msg += "— DAC: " + (", ".join(struct["DAC"]) if struct["DAC"] else "") + "\n"
+    msg += "— <b>SAC:</b> " + (", ".join(struct["SAC"]) if struct["SAC"] else "") + "\n"
+    msg += "— <b>DAC:</b> " + (", ".join(struct["DAC"]) if struct["DAC"] else "") + "\n"
     
-    msg += "— Secretary:\n"
+    msg += "— <b>Secretary:</b>\n"
     for name in struct["Secretary"]: msg += f"{name}\n"
         
-    msg += "— Event Planner\n"
-    msg += "PIC: " + (", ".join(struct["Event Planner PIC"]) if struct["Event Planner PIC"] else "") + "\n"
-    msg += "Member:\n"
-    for name in struct["Event Planner Member"]: msg += f"{name}\n"
+    msg += "\n— <b>Event Planner</b>\n"
+    msg += "<b>PIC:</b> " + (", ".join(struct["Event Planner PIC"]) if struct["Event Planner PIC"] else "") + "\n"
+    msg += "<b>Member:</b> " + (", ".join(struct["Event Planner Member"]) if struct["Event Planner Member"] else "") + "\n"
 
-    msg += "— Wordsmith\n"
-    msg += "PIC: " + (", ".join(struct["Wordsmith PIC"]) if struct["Wordsmith PIC"] else "") + "\n"
-    msg += "Member:\n"
-    for name in struct["Wordsmith Member"]: msg += f"{name}\n"
+    msg += "— <b>Wordsmith</b>\n"
+    msg += "<b>PIC:</b> " + (", ".join(struct["Wordsmith PIC"]) if struct["Wordsmith PIC"] else "") + "\n"
+    msg += "<b>Member:</b> " + (", ".join(struct["Wordsmith Member"]) if struct["Wordsmith Member"] else "") + "\n"
         
-    msg += "— Editor\n"
-    msg += "PIC: " + (", ".join(struct["Editor PIC"]) if struct["Editor PIC"] else "") + "\n"
-    msg += "Member:\n"
-    for name in struct["Editor Member"]: msg += f"{name}\n"
+    msg += "— <b>Editor</b>\n"
+    msg += "<b>PIC:</b> " + (", ".join(struct["Editor PIC"]) if struct["Editor PIC"] else "") + "\n"
+    msg += "<b>Member:</b> " + (", ".join(struct["Editor Member"]) if struct["Editor Member"] else "") + "\n"
 
-    await update.message.reply_text(msg)
+    await update.message.reply_text(msg, parse_mode="HTML")
