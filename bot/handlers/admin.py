@@ -84,7 +84,7 @@ async def add_poin(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
             "⚠️ *Invalid format.*\n"
             "Usage: `/point <username/ID...> <amount> <reason>`\n"
-            "Example: `/point @user1 @user2 10 Bonus Mingguan`\n"
+            "Example: `/point @user1 @user2 10 Weekly Bonus`\n"
             "*(Use negative numbers to deduct points)*",
             parse_mode="Markdown"
         )
@@ -152,8 +152,8 @@ import pandas as pd
 def get_dashboard_main_keyboard(telegram_id: int = None):
     keyboard = [
         [InlineKeyboardButton("📊 Member Stats", callback_data="dash_stats"), InlineKeyboardButton("🏆 Point Recap", callback_data="dash_points")],
-        [InlineKeyboardButton("🔍 Filter Data Anggota", callback_data="dash_filter_menu")],
-        [InlineKeyboardButton("📈 Generate Laporan Bulanan", callback_data="dash_report")]
+        [InlineKeyboardButton("🔍 Filter Member Data", callback_data="dash_filter_menu")],
+        [InlineKeyboardButton("📈 Generate Monthly Report", callback_data="dash_report")]
     ]
     if str(telegram_id) == str(OWNER_ID):
         keyboard.append([InlineKeyboardButton("📥 Raw Database Backup", callback_data="dash_export")])
@@ -216,11 +216,11 @@ async def dashboard_callback(update: Update, context: ContextTypes.DEFAULT_TYPE)
     elif action == "dash_filter_menu":
         keyboard = [
             [InlineKeyboardButton("🟢 Active Members", callback_data="dash_flt_active"), InlineKeyboardButton("🏖️ Resting Members", callback_data="dash_flt_rest")],
-            [InlineKeyboardButton("👔 Filter by Jabatan", callback_data="dash_flt_pos")],
+            [InlineKeyboardButton("👔 Filter by Position", callback_data="dash_flt_pos")],
             [InlineKeyboardButton("📋 Filter by Attendance", callback_data="dash_flt_att")],
             [InlineKeyboardButton("🔙 Back", callback_data="dash_main")]
         ]
-        await query.edit_message_text("🔍 *Filter Data Anggota*\nPilih kriteria filter:", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
+        await query.edit_message_text("🔍 *Filter Member Data*\nSelect filter criteria:", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
         
     elif action == "dash_flt_active":
         async with aiosqlite.connect(DB_PATH) as db:
@@ -246,7 +246,7 @@ async def dashboard_callback(update: Update, context: ContextTypes.DEFAULT_TYPE)
             [InlineKeyboardButton("All PICs", callback_data="dash_pos_pic"), InlineKeyboardButton("Members", callback_data="dash_pos_mem")],
             [InlineKeyboardButton("🔙 Back to Filters", callback_data="dash_filter_menu")]
         ]
-        await query.edit_message_text("👔 *Filter Berdasarkan Jabatan*", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
+        await query.edit_message_text("👔 *Filter by Position*", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
         
     elif action.startswith("dash_pos_"):
         cat = action.replace("dash_pos_", "")
@@ -323,16 +323,16 @@ async def dashboard_callback(update: Update, context: ContextTypes.DEFAULT_TYPE)
         
     elif action == "dash_report":
         await query.edit_message_text("Generating Formatted Monthly Report (Excel), please wait...")
-        file_path = "Laporan_Bulanan_COP.xlsx"
+        file_path = "COP_Monthly_Report.xlsx"
         
         await generate_monthly_report(DB_PATH, file_path)
             
         with open(file_path, 'rb') as doc:
-            await context.bot.send_document(chat_id=query.message.chat_id, document=doc, filename="Laporan_Bulanan_COP.xlsx")
+            await context.bot.send_document(chat_id=query.message.chat_id, document=doc, filename="COP_Monthly_Report.xlsx")
             
         os.remove(file_path)
         await query.message.reply_text(
-            "✅ Laporan Bulanan terkirim!\n⚙️ *ADMIN DASHBOARD*",
+            "✅ Monthly Report sent successfully!\n⚙️ *ADMIN DASHBOARD*",
             reply_markup=get_dashboard_main_keyboard(query.from_user.id),
             parse_mode="Markdown"
         )
@@ -432,10 +432,10 @@ async def cmd_pull(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             output = "Successfully, but no output."
         await msg.edit_text(f"<pre>{output}</pre>", parse_mode="HTML")
     except subprocess.CalledProcessError as e:
-        error_output = e.stderr.strip() or e.stdout.strip() or "Terjadi kesalahan yang tidak diketahui."
-        await msg.edit_text(f"Gagal melakukan git pull:\n<pre>{error_output}</pre>", parse_mode="HTML")
+        error_output = e.stderr.strip() or e.stdout.strip() or "An unknown error occurred."
+        await msg.edit_text(f"Failed to execute git pull:\n<pre>{error_output}</pre>", parse_mode="HTML")
     except Exception as e:
-        await msg.edit_text(f"Terjadi kesalahan sistem:\n<pre>{str(e)}</pre>", parse_mode="HTML")
+        await msg.edit_text(f"System error occurred:\n<pre>{str(e)}</pre>", parse_mode="HTML")
 
 async def cmd_reload(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if str(update.effective_user.id) != str(OWNER_ID):

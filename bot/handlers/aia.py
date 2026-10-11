@@ -201,7 +201,7 @@ async def claim_forward(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def claim_internal_total(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message.text.isdigit():
-        await update.message.reply_text("❌ Harap masukkan HANYA ANGKA (misal: 250). Coba lagi atau /cancel:")
+        await update.message.reply_text("❌ Please enter NUMBERS ONLY (e.g. 250). Try again or /cancel:")
         return C_INTERNAL_TOTAL
         
     context.user_data['claim_points'] = int(update.message.text)
@@ -211,7 +211,7 @@ async def claim_internal_total(update: Update, context: ContextTypes.DEFAULT_TYP
 
 async def send_claim_to_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not ADMIN_GID:
-        await update.message.reply_text("❌ Error: ADMIN_GID belum disetel di server.")
+        await update.message.reply_text("❌ Error: ADMIN_GID has not been set on the server.")
         return ConversationHandler.END
         
     sender_id = update.effective_user.id
@@ -270,7 +270,7 @@ async def send_claim_to_admin(update: Update, context: ContextTypes.DEFAULT_TYPE
     if is_auto:
         # Kirim notifikasi tanpa tombol
         await context.bot.send_message(chat_id=ADMIN_GID, text=admin_msg, parse_mode="Markdown", disable_web_page_preview=True)
-        await update.message.reply_text(f"⚡ *Auto-Approve Aktif!* Claim added for **{name}** for **+{c_points} RP**. Points already credited to his/her profile.", parse_mode="Markdown")
+        await update.message.reply_text(f"⚡ *Auto-Approve Active!* Claim added for **{name}** for **+{c_points} RP**. Points already credited to profile.", parse_mode="Markdown")
         try:
             await context.bot.send_message(
                 chat_id=target_id, 
@@ -373,7 +373,7 @@ async def my_claims(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("You have no RP claim history.")
         return
         
-    msg = "📋 *Your Reputation Point Claim History (Last 5))*\n\n"
+    msg = "📋 *Your Reputation Point Claim History (Last 5)*\n\n"
     for c in claims:
         icon = "⏳" if c[3] == "Pending" else "✅" if c[3] == "Approved" else "❌"
         msg += f"{icon} *{c[1]}*\n"

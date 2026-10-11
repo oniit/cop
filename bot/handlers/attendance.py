@@ -23,7 +23,7 @@ async def open_sa(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 
         if not closed_sessions:
             await update.message.reply_text(
-                "⚠️ *Invalid format.*\nUsage: `/open_sa <SA Title>`\n\n_Contoh:_ `/open_sa SA 10` atau `/open_sa SA 10 — 17 Oktober 2026`\n\n_No recently closed SA sessions found to reopen._",
+                "⚠️ *Invalid format.*\nUsage: `/open_sa <SA Title>`\n\n_Example:_ `/open_sa SA 10` or `/open_sa SA 10 — 17 October 2026`\n\n_No recently closed SA sessions found to reopen._",
                 parse_mode="Markdown"
             )
             return

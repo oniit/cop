@@ -107,4 +107,4 @@ async def init_db():
         ''')
         
         await db.commit()
-    print("Database SQLite berhasil diinisialisasi.")
+    print("Database SQLite initialized successfully.")

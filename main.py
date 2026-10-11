@@ -38,7 +38,7 @@ async def setup(application):
                 await application.bot.edit_message_text(
                     chat_id=chat_id,
                     message_id=message_id,
-                    text="✅ Bot berhasil dimulai ulang (Restarted)."
+                    text="✅ Bot successfully restarted."
                 )
         except Exception as e:
             print(f"Failed to process .restart.json: {e}")
@@ -94,11 +94,11 @@ def main():
     # Background Job: Cek status rest secara berkala (setiap jam)
     application.job_queue.run_repeating(sync_rest_status_job, interval=3600, first=10)
     
-    print("Bot sedang berjalan... Tekan Ctrl+C untuk berhenti.")
+    print("Bot is running... Press Ctrl+C to stop.")
     application.run_polling()
 
 if __name__ == '__main__':
     if not BOT_TOKEN:
-        print("PERINGATAN: Belum memasukkan Token Bot di file .env!")
+        print("WARNING: Bot Token has not been set in the .env file!")
     else:
         main()

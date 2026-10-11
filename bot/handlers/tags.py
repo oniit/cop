@@ -23,7 +23,7 @@ async def cmd_cop(update: Update, context: ContextTypes.DEFAULT_TYPE):
             members = await cursor.fetchall()
             
     if not members:
-        await update.message.reply_text("Tidak ada member terdaftar.")
+        await update.message.reply_text("No registered members found.")
         return
         
     # Group by 5
@@ -72,12 +72,12 @@ async def cmd_cop_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
             members = await cursor.fetchall()
             
     if not members:
-        await update.message.reply_text("Tidak ada member terdaftar.")
+        await update.message.reply_text("No registered members found.")
         return
         
     msg = "📋 *Name List City of Prestige*\n\n"
     for codename, full_name in members:
-        name_val = full_name if full_name else "Belum diatur"
+        name_val = full_name if full_name else "Not set"
         msg += f"• *{codename}*, {name_val}\n"
         
     await update.message.reply_text(msg, parse_mode="Markdown")
@@ -91,12 +91,12 @@ async def cmd_cop_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
             members = await cursor.fetchall()
             
     if not members:
-        await update.message.reply_text("Tidak ada member terdaftar.")
+        await update.message.reply_text("No registered members found.")
         return
         
     msg = "📋 *Agent ID List City of Prestige*\n\n"
     for codename, agent_id in members:
-        id_val = agent_id if agent_id else "Belum diatur"
+        id_val = agent_id if agent_id else "Not set"
         msg += f"• *{codename}*, `{id_val}`\n"
         
     await update.message.reply_text(msg, parse_mode="Markdown")
@@ -110,12 +110,12 @@ async def cmd_cop_muse(update: Update, context: ContextTypes.DEFAULT_TYPE):
             members = await cursor.fetchall()
             
     if not members:
-        await update.message.reply_text("Tidak ada member terdaftar.")
+        await update.message.reply_text("No registered members found.")
         return
         
     msg = "📋 *Muse List City of Prestige*\n\n"
     for codename, muse in members:
-        muse_val = muse if muse else "Belum diatur"
+        muse_val = muse if muse else "Not set"
         msg += f"• *{codename}*, {muse_val}\n"
         
     await update.message.reply_text(msg, parse_mode="Markdown")
@@ -129,12 +129,12 @@ async def cmd_cop_position(update: Update, context: ContextTypes.DEFAULT_TYPE):
             members = await cursor.fetchall()
             
     if not members:
-        await update.message.reply_text("Tidak ada member terdaftar.")
+        await update.message.reply_text("No registered members found.")
         return
         
     msg = "📋 *Position List City of Prestige*\n\n"
     for codename, position in members:
-        pos_val = position if position else "Belum diatur"
+        pos_val = position if position else "Not set"
         msg += f"• *{codename}*, {pos_val}\n"
         
     await update.message.reply_text(msg, parse_mode="Markdown")
@@ -148,12 +148,12 @@ async def cmd_cop_dob(update: Update, context: ContextTypes.DEFAULT_TYPE):
             members = await cursor.fetchall()
             
     if not members:
-        await update.message.reply_text("Tidak ada member terdaftar.")
+        await update.message.reply_text("No registered members found.")
         return
         
     msg = "📋 *Date of Birth List City of Prestige*\n\n"
     for codename, dob in members:
-        dob_val = dob if dob else "Belum diatur"
+        dob_val = dob if dob else "Not set"
         msg += f"• *{codename}*, {dob_val}\n"
         
     await update.message.reply_text(msg, parse_mode="Markdown")
@@ -167,7 +167,7 @@ async def cmd_structure(update: Update, context: ContextTypes.DEFAULT_TYPE):
             members = await cursor.fetchall()
             
     if not members:
-        await update.message.reply_text("Tidak ada member terdaftar.")
+        await update.message.reply_text("No registered members found.")
         return
 
     # Organisasi data
