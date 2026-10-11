@@ -61,9 +61,16 @@ async def init_db():
                 session_id TEXT PRIMARY KEY,
                 title TEXT,
                 is_active BOOLEAN DEFAULT 1,
+                point_type TEXT DEFAULT 'COP',
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )
         ''')
+        
+        # Migrasi kolom point_type jika belum ada
+        async with db.execute("PRAGMA table_info(attendance_sessions)") as cursor:
+            existing_cols = [row[1] for row in await cursor.fetchall()]
+            if 'point_type' not in existing_cols:
+                await db.execute("ALTER TABLE attendance_sessions ADD COLUMN point_type TEXT DEFAULT 'COP'")
         
         # Tabel Histori Presensi (1 member hanya bisa 1x per sesi)
         await db.execute('''

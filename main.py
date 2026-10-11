@@ -13,7 +13,7 @@ logging.basicConfig(
 
 from bot.handlers.general import start, daftar_handler, profil, leaderboard, edit_profile_handler
 from bot.handlers.admin import edit_role, add_poin, dashboard, dashboard_callback, cmd_pull, cmd_reload
-from bot.handlers.attendance import open_attendance, close_attendance, active_sessions, attendance_button, reopen_attendance_button, close_attendance_button
+from bot.handlers.attendance import open_attendance, close_attendance, active_sessions, attendance_button, reopen_attendance_button, close_attendance_button, open_sa, close_sa, sa_sessions
 from bot.handlers.rest import rest_handler, sync_rest_status_job, set_active
 from bot.handlers.aia import claim_handler, admin_claim_action, my_claims
 from bot.handlers.tags import cmd_cop, cmd_cop_muse, cmd_cop_profile, cmd_structure
@@ -75,6 +75,9 @@ def main():
     application.add_handler(CommandHandler('structure', cmd_structure))
     
     # Handler Presensi
+    application.add_handler(CommandHandler('open_sa', open_sa))
+    application.add_handler(CommandHandler('close_sa', close_sa))
+    application.add_handler(CommandHandler('sa', sa_sessions))
     application.add_handler(CommandHandler('open_attendance', open_attendance))
     application.add_handler(CommandHandler('close_attendance', close_attendance))
     application.add_handler(CommandHandler('attendance', active_sessions))

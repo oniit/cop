@@ -10,7 +10,59 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config import DB_PATH
 from bot.handlers.admin import is_admin
 
-# --- COMMAND /open_attendance ---
+# --- COMMAND /open_sa (Study Assignment / AIA-RP Points) ---
+async def open_sa(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not await is_admin(update.effective_user.id):
+        await update.message.reply_text("⛔ *Access Denied.* You do not have Admin privileges.", parse_mode="Markdown")
+        return
+        
+    if not context.args:
+        async with aiosqlite.connect(DB_PATH) as db:
+            async with db.execute("SELECT session_id, title FROM attendance_sessions WHERE is_active = 0 AND point_type = 'AIA' ORDER BY ROWID DESC LIMIT 10") as cursor:
+                closed_sessions = await cursor.fetchall()
+                
+        if not closed_sessions:
+            await update.message.reply_text(
+                "⚠️ *Invalid format.*\nUsage: `/open_sa <SA Title>`\n\n_Contoh:_ `/open_sa SA 10` atau `/open_sa SA 10 — 17 Oktober 2026`\n\n_No recently closed SA sessions found to reopen._",
+                parse_mode="Markdown"
+            )
+            return
+            
+        text = "📚 *Recently Closed SA Sessions*\nClick a button to reopen an SA session:\n\n(To create a new one, use: `/open_sa <SA Title>`)"
+        keyboard = []
+        for sess in closed_sessions:
+            keyboard.append([InlineKeyboardButton(f"🔓 Reopen {sess[1]}", callback_data=f"reopenatt_{sess[0]}")])
+            
+        await update.message.reply_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
+        return
+        
+    title = " ".join(context.args)
+    session_id = f"SA-{str(uuid.uuid4())[:8].upper()}"
+    
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute("INSERT INTO attendance_sessions (session_id, title, is_active, point_type) VALUES (?, ?, 1, 'AIA')", (session_id, title))
+        await db.commit()
+        
+    keyboard = [
+        [InlineKeyboardButton("✅ Present", callback_data=f"att_toggle_{session_id}")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await update.message.reply_text(
+        f"📚 *STUDY ASSIGNMENT (SA) ATTENDANCE OPENED*\n"
+        f"━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        f"*{title}*\n\n"
+        f"Alokasi Poin (RP):\n"
+        f"• Hadir: +5 RP\n"
+        f"• Izin: +2 RP\n"
+        f"• Batal: 0 RP\n\n"
+        f"Click the button below to record your attendance.\n"
+        f"*(Click again to Excuse / Cancel)*",
+        reply_markup=reply_markup,
+        parse_mode="Markdown"
+    )
+
+# --- COMMAND /open_attendance (COP Internal / CP Points) ---
 async def open_attendance(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_admin(update.effective_user.id):
         await update.message.reply_text("⛔ *Access Denied.* You do not have Admin privileges.", parse_mode="Markdown")
@@ -18,7 +70,7 @@ async def open_attendance(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
     if not context.args:
         async with aiosqlite.connect(DB_PATH) as db:
-            async with db.execute("SELECT session_id, title FROM attendance_sessions WHERE is_active = 0 ORDER BY ROWID DESC LIMIT 10") as cursor:
+            async with db.execute("SELECT session_id, title FROM attendance_sessions WHERE is_active = 0 AND (point_type = 'COP' OR point_type IS NULL) ORDER BY ROWID DESC LIMIT 10") as cursor:
                 closed_sessions = await cursor.fetchall()
                 
         if not closed_sessions:
@@ -34,14 +86,12 @@ async def open_attendance(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
         
     title = " ".join(context.args)
-    # Generate unique ID untuk sesi ini (contoh: pendek)
     session_id = f"ATT-{str(uuid.uuid4())[:8].upper()}"
     
     async with aiosqlite.connect(DB_PATH) as db:
-        await db.execute("INSERT INTO attendance_sessions (session_id, title, is_active) VALUES (?, ?, 1)", (session_id, title))
+        await db.execute("INSERT INTO attendance_sessions (session_id, title, is_active, point_type) VALUES (?, ?, 1, 'COP')", (session_id, title))
         await db.commit()
         
-    # Buat tombol Inline
     keyboard = [
         [InlineKeyboardButton("✅ Present", callback_data=f"att_toggle_{session_id}")]
     ]
@@ -51,8 +101,12 @@ async def open_attendance(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"📢 *ATTENDANCE OPENED*\n"
         f"━━━━━━━━━━━━━━━━━━\n"
         f"*{title}*\n\n"
+        f"Alokasi Poin (CP):\n"
+        f"• Hadir: +5 CP\n"
+        f"• Izin: +2 CP\n"
+        f"• Batal: 0 CP\n\n"
         f"Click the button below to record your attendance.\n"
-        f"*(Click again to cancel)*",
+        f"*(Click again to Excuse / Cancel)*",
         reply_markup=reply_markup,
         parse_mode="Markdown"
     )
@@ -68,7 +122,6 @@ async def attendance_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
         
     parts = callback_data.split("_")
-    # Dukungan backward compatibility untuk format lama
     session_id = parts[1] if len(parts) == 2 else parts[2]
     
     async with aiosqlite.connect(DB_PATH) as db:
@@ -80,8 +133,8 @@ async def attendance_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await query.answer("❌ You are not registered! Type /regist first.", show_alert=True)
             return
             
-        # Cek apakah sesi masih aktif
-        async with db.execute("SELECT title, is_active FROM attendance_sessions WHERE session_id = ?", (session_id,)) as cursor:
+        # Cek apakah sesi masih aktif dan ambil point_type
+        async with db.execute("SELECT title, is_active, point_type FROM attendance_sessions WHERE session_id = ?", (session_id,)) as cursor:
             session = await cursor.fetchone()
             
         if not session:
@@ -92,6 +145,13 @@ async def attendance_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await query.answer("❌ This attendance session has been closed.", show_alert=True)
             return
             
+        title = session[0]
+        point_type = session[2] if len(session) > 2 and session[2] else "COP"
+        is_sa = (point_type == "AIA")
+        col_points = "aia_points" if is_sa else "cop_points"
+        unit_label = "RP" if is_sa else "CP"
+        pt_log = "AIA" if is_sa else "COP"
+        
         # Cek state saat ini
         async with db.execute("SELECT status, points_awarded FROM attendance_logs WHERE session_id = ? AND telegram_id = ?", (session_id, telegram_id)) as cursor:
             log = await cursor.fetchone()
@@ -101,10 +161,10 @@ async def attendance_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
             status = "Present"
             points = 5
             await db.execute("INSERT INTO attendance_logs (session_id, telegram_id, status, points_awarded) VALUES (?, ?, ?, ?)", (session_id, telegram_id, status, points))
-            await db.execute("UPDATE members SET cop_points = cop_points + ? WHERE telegram_id = ?", (points, telegram_id))
-            await db.execute("INSERT INTO point_logs (telegram_id, point_type, amount, reason, issued_by) VALUES (?, 'COP', ?, ?, ?)",
-                             (telegram_id, points, f"Attendance: {status} ({session[0]})", context.bot.id))
-            msg = f"✅ Attendance recorded as {status} (+{points} RP)!"
+            await db.execute(f"UPDATE members SET {col_points} = {col_points} + ? WHERE telegram_id = ?", (points, telegram_id))
+            await db.execute("INSERT INTO point_logs (telegram_id, point_type, amount, reason, issued_by) VALUES (?, ?, ?, ?, ?)",
+                             (telegram_id, pt_log, points, f"Attendance: {status} ({title})", context.bot.id))
+            msg = f"✅ Attendance recorded as {status} (+{points} {unit_label})!"
             next_btn_text = "💡 Excuse"
             
         elif log[0] == "Present":
@@ -115,10 +175,10 @@ async def attendance_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
             diff = new_points - old_points
             
             await db.execute("UPDATE attendance_logs SET status = ?, points_awarded = ? WHERE session_id = ? AND telegram_id = ?", (status, new_points, session_id, telegram_id))
-            await db.execute("UPDATE members SET cop_points = cop_points + ? WHERE telegram_id = ?", (diff, telegram_id))
-            await db.execute("INSERT INTO point_logs (telegram_id, point_type, amount, reason, issued_by) VALUES (?, 'COP', ?, ?, ?)",
-                             (telegram_id, diff, f"Attendance Changed to {status} ({session[0]})", context.bot.id))
-            msg = f"💡 Attendance changed to {status} (+{new_points} RP total)!"
+            await db.execute(f"UPDATE members SET {col_points} = {col_points} + ? WHERE telegram_id = ?", (diff, telegram_id))
+            await db.execute("INSERT INTO point_logs (telegram_id, point_type, amount, reason, issued_by) VALUES (?, ?, ?, ?, ?)",
+                             (telegram_id, pt_log, diff, f"Attendance Changed to {status} ({title})", context.bot.id))
+            msg = f"💡 Attendance changed to {status} (+{new_points} {unit_label} total)!"
             next_btn_text = "❌ Cancel"
             
         else:
@@ -127,10 +187,10 @@ async def attendance_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
             
             await db.execute("DELETE FROM attendance_logs WHERE session_id = ? AND telegram_id = ?", (session_id, telegram_id))
             if old_points > 0:
-                await db.execute("UPDATE members SET cop_points = cop_points - ? WHERE telegram_id = ?", (old_points, telegram_id))
-                await db.execute("INSERT INTO point_logs (telegram_id, point_type, amount, reason, issued_by) VALUES (?, 'COP', ?, ?, ?)",
-                                 (telegram_id, -old_points, f"Attendance Cancelled ({session[0]})", context.bot.id))
-            msg = "❌ Attendance cancelled. Points deducted."
+                await db.execute(f"UPDATE members SET {col_points} = {col_points} - ? WHERE telegram_id = ?", (old_points, telegram_id))
+                await db.execute("INSERT INTO point_logs (telegram_id, point_type, amount, reason, issued_by) VALUES (?, ?, ?, ?, ?)",
+                                 (telegram_id, pt_log, -old_points, f"Attendance Cancelled ({title})", context.bot.id))
+            msg = f"❌ Attendance cancelled. {unit_label} deducted."
             next_btn_text = "✅ Present"
             
         await db.commit()
@@ -146,19 +206,14 @@ async def attendance_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
             for btn in row:
                 if btn.callback_data == callback_data:
                     if "(Click to" in btn.text:
-                        # Format dari /attendance
-                        title = session[0]
+                        # Format dari /attendance atau /sa
                         if not log:
-                            # Tadi Absent -> Sekarang Present
                             new_text = f"✅ {title} (Click to Excuse)"
                         elif log[0] == "Present":
-                            # Tadi Present -> Sekarang Excuse
                             new_text = f"💡 {title} (Click to Cancel)"
                         else:
-                            # Tadi Excuse -> Sekarang Absent
                             new_text = f"❌ {title} (Click to Present)"
                     else:
-                        # Format standard
                         new_text = next_btn_text
                         
                     new_row.append(InlineKeyboardButton(new_text, callback_data=btn.callback_data))
@@ -179,7 +234,7 @@ async def close_attendance(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
     if not context.args:
         async with aiosqlite.connect(DB_PATH) as db:
-            async with db.execute("SELECT session_id, title FROM attendance_sessions WHERE is_active = 1") as cursor:
+            async with db.execute("SELECT session_id, title, point_type FROM attendance_sessions WHERE is_active = 1") as cursor:
                 active_sessions = await cursor.fetchall()
                 
         if not active_sessions:
@@ -189,7 +244,8 @@ async def close_attendance(update: Update, context: ContextTypes.DEFAULT_TYPE):
         text = "📋 *Open Sessions*\nClick a button to close an attendance session:"
         keyboard = []
         for sess in active_sessions:
-            keyboard.append([InlineKeyboardButton(f"🔒 Close {sess[1]}", callback_data=f"closeatt_{sess[0]}")])
+            tag = "[SA] " if sess[2] == 'AIA' else "[COP] "
+            keyboard.append([InlineKeyboardButton(f"🔒 Close {tag}{sess[1]}", callback_data=f"closeatt_{sess[0]}")])
             
         await update.message.reply_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
         return
@@ -213,12 +269,53 @@ async def close_attendance(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
     await update.message.reply_text(f"✅ Attendance for *{session[0]}* has been permanently closed.", parse_mode="Markdown")
 
-# --- COMMAND /attendance (List Open Sessions) ---
-async def active_sessions(update: Update, context: ContextTypes.DEFAULT_TYPE):
+# --- COMMAND /close_sa ---
+async def close_sa(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not await is_admin(update.effective_user.id):
+        await update.message.reply_text("⛔ *Access Denied.* You do not have Admin privileges.", parse_mode="Markdown")
+        return
+        
+    if not context.args:
+        async with aiosqlite.connect(DB_PATH) as db:
+            async with db.execute("SELECT session_id, title FROM attendance_sessions WHERE is_active = 1 AND point_type = 'AIA'") as cursor:
+                active_sa = await cursor.fetchall()
+                
+        if not active_sa:
+            await update.message.reply_text("ℹ️ There are no open Study Assignment (SA) sessions to close.", parse_mode="Markdown")
+            return
+            
+        text = "📚 *Open SA Sessions*\nClick a button to close an SA session:"
+        keyboard = []
+        for sess in active_sa:
+            keyboard.append([InlineKeyboardButton(f"🔒 Close {sess[1]}", callback_data=f"closeatt_{sess[0]}")])
+            
+        await update.message.reply_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
+        return
+        
+    session_id = context.args[0]
+    
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute("SELECT title, is_active FROM attendance_sessions WHERE session_id = ? AND point_type = 'AIA'", (session_id,)) as cursor:
+            session = await cursor.fetchone()
+            
+        if not session:
+            await update.message.reply_text(f"❌ SA Session ID `{session_id}` not found.", parse_mode="Markdown")
+            return
+            
+        if not session[1]:
+            await update.message.reply_text(f"⚠️ SA Session `{session_id}` is already closed.", parse_mode="Markdown")
+            return
+            
+        await db.execute("UPDATE attendance_sessions SET is_active = 0 WHERE session_id = ?", (session_id,))
+        await db.commit()
+        
+    await update.message.reply_text(f"✅ Study Assignment for *{session[0]}* has been permanently closed.", parse_mode="Markdown")
+
+# --- COMMAND /sa (List Open Study Assignment Sessions) ---
+async def sa_sessions(update: Update, context: ContextTypes.DEFAULT_TYPE):
     telegram_id = update.effective_user.id
     
     async with aiosqlite.connect(DB_PATH) as db:
-        # Cek apakah user terdaftar
         async with db.execute("SELECT full_name FROM members WHERE telegram_id = ?", (telegram_id,)) as cursor:
             user = await cursor.fetchone()
             
@@ -226,18 +323,16 @@ async def active_sessions(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text("You are not registered. Type /regist first.")
             return
             
-        # Ambil semua sesi aktif
-        async with db.execute("SELECT session_id, title FROM attendance_sessions WHERE is_active = 1") as cursor:
+        async with db.execute("SELECT session_id, title FROM attendance_sessions WHERE is_active = 1 AND point_type = 'AIA' ORDER BY ROWID DESC") as cursor:
             sessions = await cursor.fetchall()
             
     if not sessions:
-        await update.message.reply_text("There are no open attendance sessions at the moment.")
+        await update.message.reply_text("There are no open Study Assignment (SA) sessions at the moment.")
         return
         
-    text = "📋 *Open Attendance Sessions*\n"
-    text += "Please match exactly with the data in https://t.me/POINTREPUTATIONAIA/4"
+    text = "📚 *Open Study Assignment (SA) Sessions*\n"
+    text += "Silakan klik tombol kehadiran di bawah ini:\n"
     
-    # Buat tombol untuk tiap sesi yang masih buka
     keyboard = []
     async with aiosqlite.connect(DB_PATH) as db:
         for sess in sessions:
@@ -257,6 +352,54 @@ async def active_sessions(update: Update, context: ContextTypes.DEFAULT_TYPE):
             keyboard.append([InlineKeyboardButton(btn_text, callback_data=f"att_{session_id}")])
         
     reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.message.reply_text(text, reply_markup=reply_markup, parse_mode="Markdown", link_preview_options=LinkPreviewOptions(is_disabled=True))
+
+# --- COMMAND /attendance (List All Open Sessions) ---
+async def active_sessions(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    telegram_id = update.effective_user.id
+    
+    async with aiosqlite.connect(DB_PATH) as db:
+        # Cek apakah user terdaftar
+        async with db.execute("SELECT full_name FROM members WHERE telegram_id = ?", (telegram_id,)) as cursor:
+            user = await cursor.fetchone()
+            
+        if not user:
+            await update.message.reply_text("You are not registered. Type /regist first.")
+            return
+            
+        # Ambil semua sesi aktif
+        async with db.execute("SELECT session_id, title, point_type FROM attendance_sessions WHERE is_active = 1 ORDER BY ROWID DESC") as cursor:
+            sessions = await cursor.fetchall()
+            
+    if not sessions:
+        await update.message.reply_text("There are no open attendance sessions at the moment.")
+        return
+        
+    text = "📋 *Open Attendance Sessions*\n"
+    text += "Please match exactly with the data in https://t.me/POINTREPUTATIONAIA/4"
+    
+    # Buat tombol untuk tiap sesi yang masih buka
+    keyboard = []
+    async with aiosqlite.connect(DB_PATH) as db:
+        for sess in sessions:
+            session_id = sess[0]
+            title = sess[1]
+            pt_tag = "[SA] " if sess[2] == "AIA" else ""
+            display_title = f"{pt_tag}{title}"
+            
+            async with db.execute("SELECT status FROM attendance_logs WHERE session_id = ? AND telegram_id = ?", (session_id, telegram_id)) as cursor:
+                log = await cursor.fetchone()
+                
+            if not log:
+                btn_text = f"❌ {display_title} (Click to Present)"
+            elif log[0] == "Present":
+                btn_text = f"✅ {display_title} (Click to Excuse)"
+            else:
+                btn_text = f"💡 {display_title} (Click to Cancel)"
+                
+            keyboard.append([InlineKeyboardButton(btn_text, callback_data=f"att_{session_id}")])
+        
+    reply_markup = InlineKeyboardMarkup(keyboard)
     
     await update.message.reply_text(text, reply_markup=reply_markup, parse_mode="Markdown", link_preview_options=LinkPreviewOptions(is_disabled=True))
 
@@ -271,9 +414,10 @@ async def reopen_attendance_button(update: Update, context: ContextTypes.DEFAULT
     session_id = query.data.split("_")[1]
     
     async with aiosqlite.connect(DB_PATH) as db:
-        async with db.execute("SELECT title FROM attendance_sessions WHERE session_id = ?", (session_id,)) as cursor:
+        async with db.execute("SELECT title, point_type FROM attendance_sessions WHERE session_id = ?", (session_id,)) as cursor:
             session = await cursor.fetchone()
         title = session[0] if session else session_id
+        point_type = session[1] if (session and len(session) > 1 and session[1]) else "COP"
         
         await db.execute("UPDATE attendance_sessions SET is_active = 1 WHERE session_id = ?", (session_id,))
         await db.commit()
@@ -284,12 +428,33 @@ async def reopen_attendance_button(update: Update, context: ContextTypes.DEFAULT
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
+    if point_type == "AIA":
+        msg_text = (
+            f"📚 *STUDY ASSIGNMENT (SA) REOPENED*\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            f"*{title}*\n\n"
+            f"Alokasi Poin (RP):\n"
+            f"• Hadir: +5 RP\n"
+            f"• Izin: +2 RP\n"
+            f"• Batal: 0 RP\n\n"
+            f"Click the button below to record your attendance.\n"
+            f"*(Click again to Excuse / Cancel)*"
+        )
+    else:
+        msg_text = (
+            f"📢 *ATTENDANCE REOPENED*\n"
+            f"━━━━━━━━━━━━━━━━━━\n"
+            f"*{title}*\n\n"
+            f"Alokasi Poin (CP):\n"
+            f"• Hadir: +5 CP\n"
+            f"• Izin: +2 CP\n"
+            f"• Batal: 0 CP\n\n"
+            f"Click the button below to record your attendance.\n"
+            f"*(Click again to Excuse / Cancel)*"
+        )
+    
     await query.message.reply_text(
-        f"📢 *ATTENDANCE REOPENED*\n"
-        f"━━━━━━━━━━━━━━━━━━\n"
-        f"*{title}*\n\n"
-        f"Click the button below to record your attendance.\n"
-        f"*(Click again to cancel)*",
+        msg_text,
         reply_markup=reply_markup,
         parse_mode="Markdown"
     )

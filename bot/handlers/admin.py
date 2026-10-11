@@ -280,7 +280,7 @@ async def dashboard_callback(update: Update, context: ContextTypes.DEFAULT_TYPE)
     elif action == "dash_flt_att":
         async with aiosqlite.connect(DB_PATH) as db:
             # Ambil 15 sesi terbaru
-            async with db.execute("SELECT session_id, title, is_active FROM attendance_sessions ORDER BY id DESC LIMIT 15") as cursor:
+            async with db.execute("SELECT session_id, title, is_active, point_type FROM attendance_sessions ORDER BY ROWID DESC LIMIT 15") as cursor:
                 sessions = await cursor.fetchall()
                 
         text = "📋 *Recent Attendance Sessions*\n\n"
@@ -290,7 +290,8 @@ async def dashboard_callback(update: Update, context: ContextTypes.DEFAULT_TYPE)
         else:
             for s in sessions:
                 status_icon = "🟢" if s[2] else "🔴"
-                btn_text = f"{status_icon} {s[1]}"
+                tag = "[SA] " if (len(s) > 3 and s[3] == "AIA") else "[COP] "
+                btn_text = f"{status_icon} {tag}{s[1]}"
                 keyboard.append([InlineKeyboardButton(btn_text, callback_data=f"dash_att_{s[0]}")])
                 
         keyboard.append([InlineKeyboardButton("🔙 Back to Filters", callback_data="dash_filter_menu")])
@@ -299,7 +300,7 @@ async def dashboard_callback(update: Update, context: ContextTypes.DEFAULT_TYPE)
     elif action.startswith("dash_att_"):
         session_id = action.replace("dash_att_", "")
         async with aiosqlite.connect(DB_PATH) as db:
-            async with db.execute("SELECT title, is_active FROM attendance_sessions WHERE session_id = ?", (session_id,)) as cursor:
+            async with db.execute("SELECT title, is_active, point_type FROM attendance_sessions WHERE session_id = ?", (session_id,)) as cursor:
                 sess = await cursor.fetchone()
                 
             if not sess:
@@ -310,7 +311,8 @@ async def dashboard_callback(update: Update, context: ContextTypes.DEFAULT_TYPE)
                 attendees = await cursor.fetchall()
                 
         status = "Active" if sess[1] else "Closed"
-        text = f"📋 *Attendance for {sess[0]}*\nStatus: {status}\nTotal Attended: {len(attendees)}\n\n"
+        pt_label = "Study Assignment (RP)" if (len(sess) > 2 and sess[2] == "AIA") else "COP Internal (CP)"
+        text = f"📋 *Attendance for {sess[0]}*\nType: {pt_label}\nStatus: {status}\nTotal Attended: {len(attendees)}\n\n"
         
         if not attendees:
             text += "No one has attended this session yet."
