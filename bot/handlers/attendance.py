@@ -342,6 +342,7 @@ async def sa_sessions(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 
             keyboard.append([InlineKeyboardButton(btn_text, callback_data=f"att_{session_id}")])
         
+    keyboard.append([InlineKeyboardButton("❌ Close", callback_data=f"close_menu_{telegram_id}")])
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text(text, reply_markup=reply_markup, parse_mode="Markdown", link_preview_options=LinkPreviewOptions(is_disabled=True))
 
@@ -389,6 +390,7 @@ async def active_sessions(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 
             keyboard.append([InlineKeyboardButton(btn_text, callback_data=f"att_{session_id}")])
         
+    keyboard.append([InlineKeyboardButton("❌ Close", callback_data=f"close_menu_{telegram_id}")])
     reply_markup = InlineKeyboardMarkup(keyboard)
     
     await update.message.reply_text(text, reply_markup=reply_markup, parse_mode="Markdown", link_preview_options=LinkPreviewOptions(is_disabled=True))
@@ -458,3 +460,22 @@ async def close_attendance_button(update: Update, context: ContextTypes.DEFAULT_
         await db.commit()
         
     await query.message.edit_text(f"✅ Attendance for *{title}* has been permanently closed.", parse_mode="Markdown")
+
+# --- CALLBACK HANDLER UNTUK TUTUP MENU /attendance & /sa ---
+async def close_menu_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    callback_data = query.data
+    caller_id = callback_data.replace("close_menu_", "")
+    
+    # Izinkan jika user adalah pemanggil perintah, atau Admin
+    if not caller_id or str(query.from_user.id) == caller_id or await is_admin(query.from_user.id):
+        await query.answer()
+        try:
+            await query.message.delete()
+        except Exception:
+            try:
+                await query.edit_message_reply_markup(reply_markup=None)
+            except Exception:
+                pass
+    else:
+        await query.answer("⛔ Only the command caller or Admin can close this menu.", show_alert=True)

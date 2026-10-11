@@ -40,7 +40,7 @@ async def claim_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("❌ Cancel", callback_data="claim_cancel")]
     ]
     await update.message.reply_text(
-        "🌟 *Klaim Poin AIA (RP)*\n\nSilakan pilih jenis klaim Anda:", 
+        "🌟 *Reputation Point Claim*\n\nChoose your claim type:", 
         reply_markup=InlineKeyboardMarkup(keyboard), 
         parse_mode="Markdown"
     )
@@ -51,15 +51,15 @@ async def claim_type_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
     await query.answer()
     
     if query.data == "claim_cancel":
-        await query.edit_message_text("Klaim dibatalkan.")
+        await query.edit_message_text("Claim cancelled.")
         return ConversationHandler.END
         
     context.user_data['claim_type'] = "External" if query.data == "claim_ext" else "Internal"
     
     await query.edit_message_text(
-        f"Anda memilih klaim *{context.user_data['claim_type']}*.\n\n"
-        "🔄 *Langkah 1:*\nSilakan **FORWARD (Teruskan)** pesan bukti partisipasi Anda langsung ke sini.\n\n"
-        "*(Tips: Salin / Copy LINK pesan tersebut terlebih dahulu sekarang, karena link akan diminta di langkah berikutnya agar tidak bolak-balik)*",
+        f"You chose *{context.user_data['claim_type']}* claim.\n\n"
+        "🔄 *Step 1:*\nPlease **FORWARD** your participation proof message directly here.\n\n"
+        "*(Tip: Copy the message LINK first, because the link will be requested in the next step so you don't have to go back and forth)*",
         parse_mode="Markdown"
     )
     return C_FORWARD
@@ -67,7 +67,7 @@ async def claim_type_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
 async def claim_link(update: Update, context: ContextTypes.DEFAULT_TYPE):
     link = update.message.text
     if not link.startswith("http"):
-        await update.message.reply_text("❌ Link tidak valid. Harap kirimkan link yang diawali dengan http/https, atau ketik /cancel untuk membatalkan.")
+        await update.message.reply_text("❌ Invalid Link. Please send a link starting with http/https, or type /cancel to cancel.")
         return C_LINK
         
     context.user_data['claim_link'] = link
@@ -76,9 +76,9 @@ async def claim_link(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return await send_claim_to_admin(update, context)
     else:
         await update.message.reply_text(
-            "📝 *Langkah 3 (Internal):*\n"
-            "Format Internal cukup bervariasi. Sebelum dicek Sekretaris, silakan **KETIK TOTAL NOMINAL POIN (RP)** "
-            "yang Anda ajukan dalam klaim ini secara keseluruhan (hanya angka, misal: 250):",
+            "📝 *Step 3 (Internal):*\n"
+            "Internal format can be various. Before checking by Secretary, please **TYPE THE TOTAL RP AMOUNT** "
+            "you are claiming in this claim as a whole (only numbers, e.g.: 250):",
             parse_mode="Markdown"
         )
         return C_INTERNAL_TOTAL
@@ -89,7 +89,7 @@ async def claim_forward(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = normalize_text(text)
     
     if not text:
-        await update.message.reply_text("❌ Pesan tidak terbaca. Harap forward pesan yang berisi teks, atau ketik /cancel.")
+        await update.message.reply_text("❌ Proof not readable. Please forward a message containing text, or type /cancel.")
         return C_FORWARD
         
     context.user_data['claim_text'] = text
@@ -185,16 +185,16 @@ async def claim_forward(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data['claim_date'] = event_date
         
         await update.message.reply_text(
-            "✅ Bukti terbaca.\n\n"
-            "🔗 *Langkah 2:*\nSilakan kirimkan (Paste) **LINK (Tautan)** dari pesan bukti yang barusan Anda forward:",
+            "✅ Proof received.\n\n"
+            "🔗 *Step 2:*\nPlease send the **LINK** of the proof message you just forwarded:",
             parse_mode="Markdown"
         )
         return C_LINK
         
     else:
         await update.message.reply_text(
-            "✅ Bukti terbaca.\n\n"
-            "🔗 *Langkah 2:*\nSilakan kirimkan (Paste) **LINK (Tautan)** dari pesan bukti yang barusan Anda forward:",
+            "✅ Proof received.\n\n"
+            "🔗 *Step 2:*\nPlease send the **LINK** of the proof message you just forwarded:",
             parse_mode="Markdown"
         )
         return C_LINK
@@ -370,7 +370,7 @@ async def my_claims(update: Update, context: ContextTypes.DEFAULT_TYPE):
             claims = await cursor.fetchall()
             
     if not claims:
-        await update.message.reply_text("Anda belum memiliki riwayat pengajuan klaim RP.")
+        await update.message.reply_text("You have no RP claim history.")
         return
         
     msg = "📋 *Riwayat Klaim RP Anda (5 Terakhir)*\n\n"

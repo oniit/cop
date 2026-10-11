@@ -13,7 +13,7 @@ logging.basicConfig(
 
 from bot.handlers.general import start, daftar_handler, profil, leaderboard, edit_profile_handler
 from bot.handlers.admin import edit_role, add_poin, dashboard, dashboard_callback, cmd_pull, cmd_reload
-from bot.handlers.attendance import open_attendance, close_attendance, active_sessions, attendance_button, reopen_attendance_button, close_attendance_button, open_sa, close_sa, sa_sessions
+from bot.handlers.attendance import open_attendance, close_attendance, active_sessions, attendance_button, reopen_attendance_button, close_attendance_button, open_sa, close_sa, sa_sessions, close_menu_button
 from bot.handlers.rest import rest_handler, sync_rest_status_job, set_active
 from bot.handlers.aia import claim_handler, admin_claim_action, my_claims
 from bot.handlers.tags import cmd_cop, cmd_cop_muse, cmd_cop_profile, cmd_cop_name, cmd_cop_id, cmd_cop_position, cmd_cop_dob, cmd_structure
@@ -88,6 +88,7 @@ def main():
     application.add_handler(CallbackQueryHandler(attendance_button, pattern='^att_'))
     application.add_handler(CallbackQueryHandler(reopen_attendance_button, pattern='^reopenatt_'))
     application.add_handler(CallbackQueryHandler(close_attendance_button, pattern='^closeatt_'))
+    application.add_handler(CallbackQueryHandler(close_menu_button, pattern='^close_menu_'))
     application.add_handler(CallbackQueryHandler(dashboard_callback, pattern='^dash_'))
     
     # Background Job: Cek status rest secara berkala (setiap jam)
