@@ -97,7 +97,7 @@ async def cmd_cop_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = "📋 *Agent ID List City of Prestige*\n\n"
     for codename, agent_id in members:
         id_val = agent_id if agent_id else "Belum diatur"
-        msg += f"• *{codename}*, {id_val}\n"
+        msg += f"• *{codename}*, `{id_val}`\n"
         
     await update.message.reply_text(msg, parse_mode="Markdown")
 
