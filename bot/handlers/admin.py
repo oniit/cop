@@ -290,8 +290,7 @@ async def dashboard_callback(update: Update, context: ContextTypes.DEFAULT_TYPE)
         else:
             for s in sessions:
                 status_icon = "🟢" if s[2] else "🔴"
-                tag = "[SA] " if (len(s) > 3 and s[3] == "AIA") else "[COP] "
-                btn_text = f"{status_icon} {tag}{s[1]}"
+                btn_text = f"{status_icon} {s[1]}"
                 keyboard.append([InlineKeyboardButton(btn_text, callback_data=f"dash_att_{s[0]}")])
                 
         keyboard.append([InlineKeyboardButton("🔙 Back to Filters", callback_data="dash_filter_menu")])

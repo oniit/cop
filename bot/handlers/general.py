@@ -346,6 +346,8 @@ async def edit_profile_value(update: Update, context: ContextTypes.DEFAULT_TYPE)
         if not re.match(r'^COP-\d{4}-[A-Z]{3}$', new_value):
             await update.message.reply_text("❌ Invalid format! Must be `COP-0000-XXX` (e.g. COP-0007-VIR). Try again or /cancel:", parse_mode="Markdown")
             return EDIT_VALUE
+    elif field == "muse":
+        new_value = new_value.upper()
     elif field == "motto":
         new_value = new_value if new_value == '-' else (new_value[0].upper() + new_value[1:] if new_value else new_value)
         

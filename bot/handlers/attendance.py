@@ -36,7 +36,11 @@ async def open_sa(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
         return
         
-    title = " ".join(context.args)
+    raw_title = " ".join(context.args).strip().upper()
+    if raw_title.startswith("SA ") or raw_title.startswith("SA-") or raw_title == "SA":
+        title = raw_title
+    else:
+        title = f"SA {raw_title}"
     session_id = f"SA-{str(uuid.uuid4())[:8].upper()}"
     
     async with aiosqlite.connect(DB_PATH) as db:
@@ -49,8 +53,7 @@ async def open_sa(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reply_markup = InlineKeyboardMarkup(keyboard)
     
     await update.message.reply_text(
-        f"📚 *SA ATTENDANCE OPENED*\n\n"
-        f"*{title}*\n\n"
+        f"📚 *{title} OPENED*\n\n"
         f"Click the button below to record your attendance.\n"
         f"*(Click again to Excuse / Cancel)*",
         reply_markup=reply_markup,
@@ -80,7 +83,7 @@ async def open_attendance(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
         return
         
-    title = " ".join(context.args)
+    title = " ".join(context.args).strip().upper()
     session_id = f"ATT-{str(uuid.uuid4())[:8].upper()}"
     
     async with aiosqlite.connect(DB_PATH) as db:
@@ -93,8 +96,7 @@ async def open_attendance(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reply_markup = InlineKeyboardMarkup(keyboard)
     
     await update.message.reply_text(
-        f"📢 *ATTENDANCE OPENED*\n\n"
-        f"*{title}*\n\n"
+        f"📢 *{title} ATTENDANCE OPENED*\n\n"
         f"Click the button below to record your attendance.\n"
         f"*(Click again to Excuse / Cancel)*",
         reply_markup=reply_markup,
@@ -234,8 +236,7 @@ async def close_attendance(update: Update, context: ContextTypes.DEFAULT_TYPE):
         text = "📋 *Open Sessions*\nClick a button to close an attendance session:"
         keyboard = []
         for sess in active_sessions:
-            tag = "[SA] " if sess[2] == 'AIA' else "[COP] "
-            keyboard.append([InlineKeyboardButton(f"🔒 Close {tag}{sess[1]}", callback_data=f"closeatt_{sess[0]}")])
+            keyboard.append([InlineKeyboardButton(f"🔒 Close {sess[1]}", callback_data=f"closeatt_{sess[0]}")])
             
         await update.message.reply_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
         return
@@ -374,8 +375,7 @@ async def active_sessions(update: Update, context: ContextTypes.DEFAULT_TYPE):
         for sess in sessions:
             session_id = sess[0]
             title = sess[1]
-            pt_tag = "[SA] " if sess[2] == "AIA" else ""
-            display_title = f"{pt_tag}{title}"
+            display_title = title
             
             async with db.execute("SELECT status FROM attendance_logs WHERE session_id = ? AND telegram_id = ?", (session_id, telegram_id)) as cursor:
                 log = await cursor.fetchone()
@@ -419,26 +419,15 @@ async def reopen_attendance_button(update: Update, context: ContextTypes.DEFAULT
     reply_markup = InlineKeyboardMarkup(keyboard)
     
     if point_type == "AIA":
+        display_title = title if title.startswith("SA") else f"SA {title}"
         msg_text = (
-            f"📚 *STUDY ASSIGNMENT (SA) REOPENED*\n"
-            f"━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-            f"*{title}*\n\n"
-            f"Alokasi Poin (RP):\n"
-            f"• Hadir: +5 RP\n"
-            f"• Izin: +2 RP\n"
-            f"• Batal: 0 RP\n\n"
+            f"📚 *{display_title} REOPENED*\n\n"
             f"Click the button below to record your attendance.\n"
             f"*(Click again to Excuse / Cancel)*"
         )
     else:
         msg_text = (
-            f"📢 *ATTENDANCE REOPENED*\n"
-            f"━━━━━━━━━━━━━━━━━━\n"
-            f"*{title}*\n\n"
-            f"Alokasi Poin (CP):\n"
-            f"• Hadir: +5 CP\n"
-            f"• Izin: +2 CP\n"
-            f"• Batal: 0 CP\n\n"
+            f"📢 *{title} ATTENDANCE REOPENED*\n\n"
             f"Click the button below to record your attendance.\n"
             f"*(Click again to Excuse / Cancel)*"
         )

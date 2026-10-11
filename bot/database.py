@@ -71,6 +71,10 @@ async def init_db():
             existing_cols = [row[1] for row in await cursor.fetchall()]
             if 'point_type' not in existing_cols:
                 await db.execute("ALTER TABLE attendance_sessions ADD COLUMN point_type TEXT DEFAULT 'COP'")
+                
+        # Pastikan seluruh muse dan title presensi uppercase
+        await db.execute("UPDATE members SET muse = UPPER(muse) WHERE muse IS NOT NULL")
+        await db.execute("UPDATE attendance_sessions SET title = UPPER(title) WHERE title IS NOT NULL")
         
         # Tabel Histori Presensi (1 member hanya bisa 1x per sesi)
         await db.execute('''

@@ -16,7 +16,7 @@ from bot.handlers.admin import edit_role, add_poin, dashboard, dashboard_callbac
 from bot.handlers.attendance import open_attendance, close_attendance, active_sessions, attendance_button, reopen_attendance_button, close_attendance_button, open_sa, close_sa, sa_sessions
 from bot.handlers.rest import rest_handler, sync_rest_status_job, set_active
 from bot.handlers.aia import claim_handler, admin_claim_action, my_claims
-from bot.handlers.tags import cmd_cop, cmd_cop_muse, cmd_cop_profile, cmd_structure
+from bot.handlers.tags import cmd_cop, cmd_cop_muse, cmd_cop_profile, cmd_cop_name, cmd_cop_id, cmd_cop_position, cmd_cop_dob, cmd_structure
 from telegram.ext import CallbackQueryHandler
 import os
 import json
@@ -70,8 +70,12 @@ def main():
     
     # Handler Tags
     application.add_handler(CommandHandler('cop', cmd_cop))
-    application.add_handler(CommandHandler('cop_muse', cmd_cop_muse))
     application.add_handler(CommandHandler('cop_profile', cmd_cop_profile))
+    application.add_handler(CommandHandler('cop_name', cmd_cop_name))
+    application.add_handler(CommandHandler('cop_id', cmd_cop_id))
+    application.add_handler(CommandHandler('cop_muse', cmd_cop_muse))
+    application.add_handler(CommandHandler('cop_position', cmd_cop_position))
+    application.add_handler(CommandHandler('cop_dob', cmd_cop_dob))
     application.add_handler(CommandHandler('structure', cmd_structure))
     
     # Handler Presensi

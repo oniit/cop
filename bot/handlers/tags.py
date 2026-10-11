@@ -60,7 +60,7 @@ async def cmd_cop_muse(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Tidak ada member terdaftar.")
         return
         
-    msg = "📋 *Daftar Muse City of Prestige*\n\n"
+    msg = "📋 *Muse List City of Prestige*\n\n"
     for codename, muse in members:
         muse_val = muse if muse else "Belum diatur"
         msg += f"• {codename} - {muse_val}\n"
@@ -69,19 +69,91 @@ async def cmd_cop_muse(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def cmd_cop_profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
-    /cop_profile - daftar lengkap "nama - codename", urutkan berdasarkan alfabet (nama)
+    /cop_profile - direktori penjelasan seluruh perintah profil City of Prestige
+    """
+    text = (
+        "📋 *City of Prestige Profile Directory*\n\n"
+        "/cop_name for Member Name list\n"
+        "/cop_id for Agent ID list\n"
+        "/cop_muse for Muse list\n"
+        "/cop_position for Position list\n"
+        "/cop_dob for Date of Birth list"
+    )
+    await update.message.reply_text(text, parse_mode="Markdown")
+
+async def cmd_cop_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    /cop_name - daftar lengkap "codename - nama", urutkan berdasarkan alfabet codename
     """
     async with aiosqlite.connect(DB_PATH) as db:
-        async with db.execute("SELECT full_name, codename FROM members ORDER BY full_name ASC") as cursor:
+        async with db.execute("SELECT codename, full_name FROM members ORDER BY codename ASC") as cursor:
             members = await cursor.fetchall()
             
     if not members:
         await update.message.reply_text("Tidak ada member terdaftar.")
         return
         
-    msg = "📋 *Daftar Profil City of Prestige*\n\n"
-    for full_name, codename in members:
-        msg += f"• {full_name} - {codename}\n"
+    msg = "📋 *Name List City of Prestige*\n\n"
+    for codename, full_name in members:
+        name_val = full_name if full_name else "Belum diatur"
+        msg += f"• {codename} - {name_val}\n"
+        
+    await update.message.reply_text(msg, parse_mode="Markdown")
+
+async def cmd_cop_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    /cop_id - daftar lengkap "codename - agent id", urutkan berdasarkan alfabet codename
+    """
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute("SELECT codename, agent_id FROM members ORDER BY codename ASC") as cursor:
+            members = await cursor.fetchall()
+            
+    if not members:
+        await update.message.reply_text("Tidak ada member terdaftar.")
+        return
+        
+    msg = "📋 *Agent ID List City of Prestige*\n\n"
+    for codename, agent_id in members:
+        id_val = agent_id if agent_id else "Belum diatur"
+        msg += f"• {codename} - {id_val}\n"
+        
+    await update.message.reply_text(msg, parse_mode="Markdown")
+
+async def cmd_cop_position(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    /cop_position - daftar lengkap "codename - position", urutkan berdasarkan alfabet codename
+    """
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute("SELECT codename, position FROM members ORDER BY codename ASC") as cursor:
+            members = await cursor.fetchall()
+            
+    if not members:
+        await update.message.reply_text("Tidak ada member terdaftar.")
+        return
+        
+    msg = "📋 *Position List City of Prestige*\n\n"
+    for codename, position in members:
+        pos_val = position if position else "Belum diatur"
+        msg += f"• {codename} - {pos_val}\n"
+        
+    await update.message.reply_text(msg, parse_mode="Markdown")
+
+async def cmd_cop_dob(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    /cop_dob - daftar lengkap "codename - dob", urutkan berdasarkan alfabet codename
+    """
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute("SELECT codename, dob FROM members ORDER BY codename ASC") as cursor:
+            members = await cursor.fetchall()
+            
+    if not members:
+        await update.message.reply_text("Tidak ada member terdaftar.")
+        return
+        
+    msg = "📋 *Date of Birth List City of Prestige*\n\n"
+    for codename, dob in members:
+        dob_val = dob if dob else "Belum diatur"
+        msg += f"• {codename} - {dob_val}\n"
         
     await update.message.reply_text(msg, parse_mode="Markdown")
 
