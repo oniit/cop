@@ -49,25 +49,6 @@ async def cmd_cop(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         await context.bot.send_message(chat_id=chat_id, text=final_msg, parse_mode="HTML", disable_web_page_preview=True)
 
-async def cmd_cop_muse(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """
-    /cop_muse - daftar lengkap "codename - muse", urutkan berdasarkan alfabet
-    """
-    async with aiosqlite.connect(DB_PATH) as db:
-        async with db.execute("SELECT codename, muse FROM members ORDER BY codename ASC") as cursor:
-            members = await cursor.fetchall()
-            
-    if not members:
-        await update.message.reply_text("Tidak ada member terdaftar.")
-        return
-        
-    msg = "📋 *Muse List City of Prestige*\n\n"
-    for codename, muse in members:
-        muse_val = muse if muse else "Belum diatur"
-        msg += f"• {codename} - {muse_val}\n"
-        
-    await update.message.reply_text(msg, parse_mode="Markdown")
-
 async def cmd_cop_profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
     /cop_profile - direktori penjelasan seluruh perintah profil City of Prestige
@@ -97,7 +78,7 @@ async def cmd_cop_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = "📋 *Name List City of Prestige*\n\n"
     for codename, full_name in members:
         name_val = full_name if full_name else "Belum diatur"
-        msg += f"• {codename} - {name_val}\n"
+        msg += f"• *{codename}*, {name_val}\n"
         
     await update.message.reply_text(msg, parse_mode="Markdown")
 
@@ -116,7 +97,26 @@ async def cmd_cop_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = "📋 *Agent ID List City of Prestige*\n\n"
     for codename, agent_id in members:
         id_val = agent_id if agent_id else "Belum diatur"
-        msg += f"• {codename} - {id_val}\n"
+        msg += f"• *{codename}*, {id_val}\n"
+        
+    await update.message.reply_text(msg, parse_mode="Markdown")
+
+async def cmd_cop_muse(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    /cop_muse - daftar lengkap "codename - muse", urutkan berdasarkan alfabet
+    """
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute("SELECT codename, muse FROM members ORDER BY codename ASC") as cursor:
+            members = await cursor.fetchall()
+            
+    if not members:
+        await update.message.reply_text("Tidak ada member terdaftar.")
+        return
+        
+    msg = "📋 *Muse List City of Prestige*\n\n"
+    for codename, muse in members:
+        muse_val = muse if muse else "Belum diatur"
+        msg += f"• *{codename}*, {muse_val}\n"
         
     await update.message.reply_text(msg, parse_mode="Markdown")
 
@@ -135,7 +135,7 @@ async def cmd_cop_position(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = "📋 *Position List City of Prestige*\n\n"
     for codename, position in members:
         pos_val = position if position else "Belum diatur"
-        msg += f"• {codename} - {pos_val}\n"
+        msg += f"• *{codename}*, {pos_val}\n"
         
     await update.message.reply_text(msg, parse_mode="Markdown")
 
@@ -154,7 +154,7 @@ async def cmd_cop_dob(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = "📋 *Date of Birth List City of Prestige*\n\n"
     for codename, dob in members:
         dob_val = dob if dob else "Belum diatur"
-        msg += f"• {codename} - {dob_val}\n"
+        msg += f"• *{codename}*, {dob_val}\n"
         
     await update.message.reply_text(msg, parse_mode="Markdown")
 
@@ -221,7 +221,7 @@ async def cmd_structure(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg += "— <b>Secretary:</b>\n"
     for name in struct["Secretary"]: msg += f"{name}\n"
         
-    msg += "\n— <b>Event Planner</b>\n"
+    msg += "— <b>Event Planner</b>\n"
     msg += "<b>PIC:</b> " + (", ".join(struct["Event Planner PIC"]) if struct["Event Planner PIC"] else "") + "\n"
     msg += "<b>Member:</b> " + (", ".join(struct["Event Planner Member"]) if struct["Event Planner Member"] else "") + "\n"
 
