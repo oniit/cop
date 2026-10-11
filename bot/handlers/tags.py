@@ -72,14 +72,14 @@ async def cmd_cop_profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
     /cop_profile - direktori penjelasan seluruh perintah profil City of Prestige
     """
     text = (
-        "📋 *City of Prestige Profile Directory*\n\n"
+        "📋 <b>City of Prestige Profile Directory</b>\n\n"
         "/cop_name for Member Name list\n"
         "/cop_id for Agent ID list\n"
         "/cop_muse for Muse list\n"
         "/cop_position for Position list\n"
         "/cop_dob for Date of Birth list"
     )
-    await update.message.reply_text(text, parse_mode="Markdown")
+    await update.message.reply_text(text, parse_mode="HTML")
 
 async def cmd_cop_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
