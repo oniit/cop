@@ -49,13 +49,8 @@ async def open_sa(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reply_markup = InlineKeyboardMarkup(keyboard)
     
     await update.message.reply_text(
-        f"📚 *STUDY ASSIGNMENT (SA) ATTENDANCE OPENED*\n"
-        f"━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        f"📚 *SA ATTENDANCE OPENED*\n\n"
         f"*{title}*\n\n"
-        f"Alokasi Poin (RP):\n"
-        f"• Hadir: +5 RP\n"
-        f"• Izin: +2 RP\n"
-        f"• Batal: 0 RP\n\n"
         f"Click the button below to record your attendance.\n"
         f"*(Click again to Excuse / Cancel)*",
         reply_markup=reply_markup,
@@ -98,13 +93,8 @@ async def open_attendance(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reply_markup = InlineKeyboardMarkup(keyboard)
     
     await update.message.reply_text(
-        f"📢 *ATTENDANCE OPENED*\n"
-        f"━━━━━━━━━━━━━━━━━━\n"
+        f"📢 *ATTENDANCE OPENED*\n\n"
         f"*{title}*\n\n"
-        f"Alokasi Poin (CP):\n"
-        f"• Hadir: +5 CP\n"
-        f"• Izin: +2 CP\n"
-        f"• Batal: 0 CP\n\n"
         f"Click the button below to record your attendance.\n"
         f"*(Click again to Excuse / Cancel)*",
         reply_markup=reply_markup,
@@ -331,7 +321,7 @@ async def sa_sessions(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
         
     text = "📚 *Open Study Assignment (SA) Sessions*\n"
-    text += "Silakan klik tombol kehadiran di bawah ini:\n"
+    text += "Please match exactly with the data in https://t.me/POINTREPUTATIONAIA/4"
     
     keyboard = []
     async with aiosqlite.connect(DB_PATH) as db:
@@ -376,7 +366,7 @@ async def active_sessions(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
         
     text = "📋 *Open Attendance Sessions*\n"
-    text += "Please match exactly with the data in https://t.me/POINTREPUTATIONAIA/4"
+    text += "For SA please match exactly with the data in https://t.me/POINTREPUTATIONAIA/4"
     
     # Buat tombol untuk tiap sesi yang masih buka
     keyboard = []
