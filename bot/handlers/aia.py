@@ -252,7 +252,7 @@ async def send_claim_to_admin(update: Update, context: ContextTypes.DEFAULT_TYPE
         await db.commit()
         
     # Format Pesan ke Admin
-    title = f"🔔 *KLAIM RP ({c_type.upper()})*"
+    title = f"🔔 *Reputation Point Claim ({c_type.upper()})*"
     if is_auto: title = f"⚡ *AUTO-APPROVED RP ({c_type.upper()})*"
     
     admin_msg = (
@@ -260,21 +260,21 @@ async def send_claim_to_admin(update: Update, context: ContextTypes.DEFAULT_TYPE
         f"━━━━━━━━━━━━━━━━━━\n"
         f"👤 *Target:* {name}\n"
         f"🎯 *Event:* {c_event}\n"
-        f"💰 *Poin Masuk:* +{c_points} RP\n"
-        f"🔗 [Klik untuk Cek Link Bukti]({c_link})\n\n"
-        f"📄 *Teks Forward dari User:*\n"
+        f"💰 *Reputation Points:* +{c_points} RP\n"
+        f"🔗 [Click to Check Proof Link]({c_link})\n\n"
+        f"📄 *User Forwarded Text:*\n"
         f"_{c_text[:500]}_"
     )
-    if len(c_text) > 500: admin_msg += "...(terpotong)"
+    if len(c_text) > 500: admin_msg += "...(truncated)"
     
     if is_auto:
         # Kirim notifikasi tanpa tombol
         await context.bot.send_message(chat_id=ADMIN_GID, text=admin_msg, parse_mode="Markdown", disable_web_page_preview=True)
-        await update.message.reply_text(f"⚡ *Auto-Approve Aktif!* Anda mendaftarkan klaim untuk **{name}** sebesar **+{c_points} RP**. Poin langsung dimasukkan ke profilnya.", parse_mode="Markdown")
+        await update.message.reply_text(f"⚡ *Auto-Approve Aktif!* Claim added for **{name}** for **+{c_points} RP**. Points already credited to his/her profile.", parse_mode="Markdown")
         try:
             await context.bot.send_message(
                 chat_id=target_id, 
-                text=f"🎉 *Klaim RP Anda telah diproses oleh Sekretaris!*\nAnda mendapatkan tambahan **+{c_points} RP** untuk event [{c_event}]({c_link}).", 
+                text=f"🎉 *Your RP claim has been processed by the Secretary!*\nYou earned **+{c_points} RP** for event [{c_event}]({c_link}).", 
                 parse_mode="Markdown"
             )
         except:
@@ -294,16 +294,16 @@ async def send_claim_to_admin(update: Update, context: ContextTypes.DEFAULT_TYPE
             disable_web_page_preview=True
         )
         await update.message.reply_text(
-            f"✅ *Klaim Berhasil Diajukan!*\n"
-            f"Sistem mencatat pengajuan **+{c_points} RP** Anda.\n"
-            f"Gunakan perintah /myclaims untuk mengecek status persetujuan.",
+            f"✅ *Claim Submitted!*\n"
+            f"The system has recorded your **+{c_points} RP** claim.\n"
+            f"Use the /myclaims command to check the approval status.",
             parse_mode="Markdown"
         )
         
     return ConversationHandler.END
 
 async def cancel_claim(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Klaim RP dibatalkan.")
+    await update.message.reply_text("RP claim cancelled.")
     return ConversationHandler.END
 
 # --- ADMIN ACTION HANDLER ---
@@ -324,11 +324,11 @@ async def admin_claim_action(update: Update, context: ContextTypes.DEFAULT_TYPE)
             claim = await cursor.fetchone()
             
         if not claim:
-            await query.answer("Klaim tidak ditemukan di database.")
+            await query.answer("Claim not found in database.")
             return
             
         if claim[2] != "Pending":
-            await query.answer("Klaim ini sudah diproses sebelumnya.")
+            await query.answer("Claim has already been processed.")
             await query.edit_message_reply_markup(reply_markup=None)
             return
             
@@ -342,11 +342,11 @@ async def admin_claim_action(update: Update, context: ContextTypes.DEFAULT_TYPE)
             await db.execute("INSERT INTO point_logs (telegram_id, point_type, amount, reason, issued_by) VALUES (?, 'AIA', ?, ?, ?)",
                              (target_id, amount, reason, admin_id))
             status_text = f"✅ *Approved* +{amount} RP by Admin."
-            user_notif = f"🎉 *Klaim RP Anda telah disetujui!*\nAnda mendapatkan tambahan **+{amount} RP**."
+            user_notif = f"🎉 *Your RP claim has been approved!*\nYou earned **+{amount} RP**."
         else:
             await db.execute("UPDATE aia_claims SET status = 'Rejected' WHERE id = ?", (claim_id,))
             status_text = f"❌ *Rejected* by Admin."
-            user_notif = "❌ *Klaim RP Anda Ditolak oleh Admin.*\nSilakan periksa kembali format klaim Anda atau hubungi Admin untuk penjelasan."
+            user_notif = "❌ *Your RP claim has been rejected by the Admin.*\nPlease check your claim format or contact the Admin for an explanation."
             
         await db.commit()
         
@@ -373,7 +373,7 @@ async def my_claims(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("You have no RP claim history.")
         return
         
-    msg = "📋 *Riwayat Klaim RP Anda (5 Terakhir)*\n\n"
+    msg = "📋 *Your Reputation Point Claim History (Last 5))*\n\n"
     for c in claims:
         icon = "⏳" if c[3] == "Pending" else "✅" if c[3] == "Approved" else "❌"
         msg += f"{icon} *{c[1]}*\n"
@@ -385,8 +385,8 @@ async def my_claims(update: Update, context: ContextTypes.DEFAULT_TYPE):
         else:
             tipe_teks = c[0]
             
-        msg += f"├ Tipe: {tipe_teks}\n"
-        msg += f"├ Poin: +{c[2]}\n"
+        msg += f"├ Type: {tipe_teks}\n"
+        msg += f"├ Points: +{c[2]}\n"
         msg += f"└ Status: *{c[3]}*\n\n"
         
     await update.message.reply_text(msg, parse_mode="Markdown", disable_web_page_preview=True)

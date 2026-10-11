@@ -424,12 +424,12 @@ async def cmd_pull(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         return
 
     import subprocess
-    msg = await update.message.reply_text("Sedang menarik pembaruan dari repository...")
+    msg = await update.message.reply_text("Starting to pull updates from repository...")
     try:
         result = subprocess.run(["git", "pull"], capture_output=True, text=True, check=True)
         output = result.stdout.strip()
         if not output:
-            output = "Berhasil, namun tidak ada output."
+            output = "Successfully, but no output."
         await msg.edit_text(f"<pre>{output}</pre>", parse_mode="HTML")
     except subprocess.CalledProcessError as e:
         error_output = e.stderr.strip() or e.stdout.strip() or "Terjadi kesalahan yang tidak diketahui."
@@ -443,7 +443,7 @@ async def cmd_reload(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
         return
 
     import os, json
-    msg = await update.message.reply_text("Memulai ulang bot...")
+    msg = await update.message.reply_text("Starting to restart bot...")
     try:
         with open(".restart.json", "w") as f:
             json.dump({"chat_id": msg.chat_id, "message_id": msg.message_id}, f)
