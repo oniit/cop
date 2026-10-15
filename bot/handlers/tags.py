@@ -215,6 +215,7 @@ async def cmd_structure(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Format output sesuai template user
     msg = "📋 <b>Structure City of Prestige</b>\n\n"
     
+    msg += "— <b>CIC:</b> JUPITER\n"
     msg += "— <b>SAC:</b> " + (", ".join(struct["SAC"]) if struct["SAC"] else "") + "\n"
     msg += "— <b>DAC:</b> " + (", ".join(struct["DAC"]) if struct["DAC"] else "") + "\n"
     
