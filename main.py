@@ -3,6 +3,7 @@ import asyncio
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
+from datetime import time as dt_time
 from config import BOT_TOKEN
 from bot.database import init_db
 
@@ -91,8 +92,9 @@ def main():
     application.add_handler(CallbackQueryHandler(close_menu_button, pattern='^close_menu_'))
     application.add_handler(CallbackQueryHandler(dashboard_callback, pattern='^dash_'))
     
-    # Background Job: Cek status rest secara berkala (setiap jam)
-    application.job_queue.run_repeating(sync_rest_status_job, interval=3600, first=10)
+    # Background Job: Sync rest status daily at 00:05 + run once on startup (10s delay)
+    application.job_queue.run_daily(sync_rest_status_job, time=dt_time(hour=0, minute=5, second=0))
+    application.job_queue.run_once(sync_rest_status_job, when=10)
     
     print("Bot is running... Press Ctrl+C to stop.")
     application.run_polling()

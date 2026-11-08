@@ -12,37 +12,84 @@ from config import DB_PATH, ADMIN_GID
 R_START, R_DURATION, R_REASON = range(3)
 
 async def sync_rest_status_job(context: ContextTypes.DEFAULT_TYPE):
-    """Background job to check leave_logs and update member status automatically."""
-    today_date = datetime.now().date()
+    """Background job to sync rest status. Runs daily at 00:05.
+    
+    Uses SQL-only approach for efficiency:
+    1. Detect members whose rest just ended (for notification)
+    2. Set active leave logs → Rest
+    3. Expired rest with no active log → Active
+    4. Cleanup old leave_logs
+    """
+    today_str = datetime.now().strftime("%Y-%m-%d")
     
     async with aiosqlite.connect(DB_PATH) as db:
-        # Reset everyone who is 'Rest' back to 'Active' first
-        await db.execute("UPDATE members SET status = 'Active' WHERE status = 'Rest'")
+        # 1) Find members whose rest just ended (still 'Rest' but no active log)
+        async with db.execute("""
+            SELECT m.telegram_id, m.full_name FROM members m
+            WHERE m.status = 'Rest' AND m.telegram_id NOT IN (
+                SELECT telegram_id FROM leave_logs
+                WHERE substr(leave_date, 1, 10) <= ?
+                  AND substr(leave_date, 12) >= ?
+            )
+        """, (today_str, today_str)) as cursor:
+            ended_members = await cursor.fetchall()
         
-        # Fetch all leave logs
-        async with db.execute("SELECT telegram_id, leave_date FROM leave_logs") as cursor:
-            logs = await cursor.fetchall()
-            
-        on_leave_ids = set()
-        for t_id, leave_date in logs:
-            try:
-                # Format: YYYY-MM-DD|YYYY-MM-DD
-                if '|' in leave_date:
-                    start_str, end_str = leave_date.split('|')
-                    s_date = datetime.strptime(start_str, "%Y-%m-%d").date()
-                    e_date = datetime.strptime(end_str, "%Y-%m-%d").date()
-                    
-                    if s_date <= today_date <= e_date:
-                        on_leave_ids.add(t_id)
-            except Exception as e:
-                logging.error(f"Error parsing leave_date '{leave_date}': {e}")
-                
-        if on_leave_ids:
-            # Set their status to 'Rest'
-            placeholders = ','.join('?' * len(on_leave_ids))
-            await db.execute(f"UPDATE members SET status = 'Rest' WHERE telegram_id IN ({placeholders})", list(on_leave_ids))
-            
+        # 2) Members with active leave log today → set Rest
+        await db.execute("""
+            UPDATE members SET status = 'Rest'
+            WHERE telegram_id IN (
+                SELECT telegram_id FROM leave_logs
+                WHERE substr(leave_date, 1, 10) <= ?
+                  AND substr(leave_date, 12) >= ?
+            )
+        """, (today_str, today_str))
+        
+        # 3) Members still 'Rest' but no active log → set Active
+        await db.execute("""
+            UPDATE members SET status = 'Active'
+            WHERE status = 'Rest' AND telegram_id NOT IN (
+                SELECT telegram_id FROM leave_logs
+                WHERE substr(leave_date, 1, 10) <= ?
+                  AND substr(leave_date, 12) >= ?
+            )
+        """, (today_str, today_str))
+        
+        # 4) Cleanup: remove expired leave_logs (end date before today)
+        await db.execute("""
+            DELETE FROM leave_logs
+            WHERE substr(leave_date, 12) < ?
+        """, (today_str,))
+        
         await db.commit()
+    
+    # 5) Notify members whose rest just ended
+    for telegram_id, full_name in ended_members:
+        name = full_name or "Member"
+        # Notify the user
+        try:
+            await context.bot.send_message(
+                chat_id=telegram_id,
+                text=f"👋 Welcome back, *{name}*!\n\n"
+                     f"Your rest period has ended and your status is now *Active*.\n"
+                     f"Have a great day! 💪",
+                parse_mode="Markdown"
+            )
+        except Exception as e:
+            logging.error(f"Failed to send rest-ended notification to {telegram_id}: {e}")
+        
+        # Notify admin group
+        if ADMIN_GID:
+            try:
+                await context.bot.send_message(
+                    chat_id=ADMIN_GID,
+                    text=f"✅ *Rest Ended (Auto)*\n"
+                         f"━━━━━━━━━━━━━━━━━━\n"
+                         f"*Name:* {name}\n"
+                         f"Status has been set back to *Active*.",
+                    parse_mode="Markdown"
+                )
+            except Exception as e:
+                logging.error(f"Failed to send rest-ended admin notification: {e}")
 
 async def rest_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     telegram_id = update.effective_user.id
@@ -152,12 +199,14 @@ async def set_active(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     async with aiosqlite.connect(DB_PATH) as db:
         # Cek status saat ini
-        async with db.execute("SELECT status FROM members WHERE telegram_id = ?", (telegram_id,)) as cursor:
+        async with db.execute("SELECT status, full_name FROM members WHERE telegram_id = ?", (telegram_id,)) as cursor:
             user = await cursor.fetchone()
             
         if not user or user[0] != 'Rest':
             await update.message.reply_text("You are already Active!")
             return
+        
+        full_name = user[1] or "Member"
             
         # Potong durasi log terakhir agar cron job besok tidak membuat mereka Rest lagi
         async with db.execute("SELECT id, leave_date FROM leave_logs WHERE telegram_id = ? ORDER BY id DESC LIMIT 1", (telegram_id,)) as cursor:
@@ -176,6 +225,20 @@ async def set_active(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await db.commit()
         
     await update.message.reply_text("✅ Welcome back! Your status has been set to *Active*.", parse_mode="Markdown")
+    
+    # Notify admin group
+    if ADMIN_GID:
+        try:
+            await context.bot.send_message(
+                chat_id=ADMIN_GID,
+                text=f"✅ *Rest Ended (Manual)*\n"
+                     f"━━━━━━━━━━━━━━━━━━\n"
+                     f"*Name:* {full_name}\n"
+                     f"Manually set status back to *Active* via /active.",
+                parse_mode="Markdown"
+            )
+        except Exception as e:
+            logging.error(f"Failed to send active notification to ADMIN_GID: {e}")
 
 rest_handler = ConversationHandler(
     entry_points=[CommandHandler('rest', rest_start)],
