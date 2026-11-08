@@ -7,7 +7,7 @@ import sys
 from datetime import datetime, timedelta
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from config import DB_PATH, ADMIN_GID
+from config import DB_PATH, ADMIN_GID, OWNER_ID
 
 R_START, R_DURATION, R_REASON = range(3)
 
@@ -77,11 +77,12 @@ async def sync_rest_status_job(context: ContextTypes.DEFAULT_TYPE):
         except Exception as e:
             logging.error(f"Failed to send rest-ended notification to {telegram_id}: {e}")
         
-        # Notify admin group
-        if ADMIN_GID:
+        # Notify admin group & owner
+        notify_targets = [cid for cid in [ADMIN_GID, OWNER_ID] if cid]
+        for chat_id in notify_targets:
             try:
                 await context.bot.send_message(
-                    chat_id=ADMIN_GID,
+                    chat_id=chat_id,
                     text=f"✅ *Rest Ended (Auto)*\n"
                          f"━━━━━━━━━━━━━━━━━━\n"
                          f"*Name:* {name}\n"
@@ -89,7 +90,7 @@ async def sync_rest_status_job(context: ContextTypes.DEFAULT_TYPE):
                     parse_mode="Markdown"
                 )
             except Exception as e:
-                logging.error(f"Failed to send rest-ended admin notification: {e}")
+                logging.error(f"Failed to send rest-ended notification to {chat_id}: {e}")
 
 async def rest_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     telegram_id = update.effective_user.id
@@ -168,10 +169,12 @@ async def rest_reason(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Trigger auto-sync so if start_date is today, status changes immediately!
     await sync_rest_status_job(context)
     
-    if ADMIN_GID:
+    # Notify admin group & owner
+    notify_targets = [cid for cid in [ADMIN_GID, OWNER_ID] if cid]
+    for chat_id in notify_targets:
         try:
             await context.bot.send_message(
-                chat_id=ADMIN_GID,
+                chat_id=chat_id,
                 text=f"🏖️ *Rest Request Received*\n"
                      f"━━━━━━━━━━━━━━━━━━\n"
                      f"*Name:* {user[0] if user else 'Unknown'}\n"
@@ -180,7 +183,7 @@ async def rest_reason(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 parse_mode="Markdown"
             )
         except Exception as e:
-            logging.error(f"Failed to send rest notification to ADMIN_GID: {e}")
+            logging.error(f"Failed to send rest notification to {chat_id}: {e}")
         
     await update.message.reply_text(
         f"✅ *Rest request submitted successfully!*\n"
@@ -226,11 +229,12 @@ async def set_active(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
     await update.message.reply_text("✅ Welcome back! Your status has been set to *Active*.", parse_mode="Markdown")
     
-    # Notify admin group
-    if ADMIN_GID:
+    # Notify admin group & owner
+    notify_targets = [cid for cid in [ADMIN_GID, OWNER_ID] if cid]
+    for chat_id in notify_targets:
         try:
             await context.bot.send_message(
-                chat_id=ADMIN_GID,
+                chat_id=chat_id,
                 text=f"✅ *Rest Ended (Manual)*\n"
                      f"━━━━━━━━━━━━━━━━━━\n"
                      f"*Name:* {full_name}\n"
@@ -238,7 +242,7 @@ async def set_active(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 parse_mode="Markdown"
             )
         except Exception as e:
-            logging.error(f"Failed to send active notification to ADMIN_GID: {e}")
+            logging.error(f"Failed to send active notification to {chat_id}: {e}")
 
 rest_handler = ConversationHandler(
     entry_points=[CommandHandler('rest', rest_start)],
