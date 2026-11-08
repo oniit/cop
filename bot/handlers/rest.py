@@ -4,7 +4,9 @@ from telegram import Update
 from telegram.ext import ContextTypes, CommandHandler, MessageHandler, filters, ConversationHandler
 import os
 import sys
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+
+WIB = timezone(timedelta(hours=7))
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config import DB_PATH, ADMIN_GID, OWNER_ID
@@ -20,12 +22,12 @@ async def sync_rest_status_job(context: ContextTypes.DEFAULT_TYPE):
     3. Expired rest with no active log → Active
     4. Cleanup old leave_logs
     """
-    today_str = datetime.now().strftime("%Y-%m-%d")
+    today_str = datetime.now(WIB).strftime("%Y-%m-%d")
     
     async with aiosqlite.connect(DB_PATH) as db:
         # 1) Find members whose rest just ended (still 'Rest' but no active log)
         async with db.execute("""
-            SELECT m.telegram_id, m.full_name FROM members m
+            SELECT m.telegram_id, m.full_name, m.codename FROM members m
             WHERE m.status = 'Rest' AND m.telegram_id NOT IN (
                 SELECT telegram_id FROM leave_logs
                 WHERE substr(leave_date, 1, 10) <= ?
@@ -63,8 +65,9 @@ async def sync_rest_status_job(context: ContextTypes.DEFAULT_TYPE):
         await db.commit()
     
     # 5) Notify members whose rest just ended
-    for telegram_id, full_name in ended_members:
+    for telegram_id, full_name, codename in ended_members:
         name = full_name or "Member"
+        cname = codename or "-"
         # Notify the user
         try:
             await context.bot.send_message(
@@ -86,6 +89,7 @@ async def sync_rest_status_job(context: ContextTypes.DEFAULT_TYPE):
                     text=f"✅ *Rest Ended (Auto)*\n"
                          f"━━━━━━━━━━━━━━━━━━\n"
                          f"*Name:* {name}\n"
+                         f"*Codename:* {cname}\n"
                          f"Status has been set back to *Active*.",
                     parse_mode="Markdown"
                 )
@@ -114,7 +118,7 @@ async def rest_start_date(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
     try:
         start_date = datetime.strptime(text, "%d-%m-%Y").date()
-        today = datetime.now().date()
+        today = datetime.now(WIB).date()
         if start_date < today:
             await update.message.reply_text("❌ Start date cannot be in the past. Try again (DD-MM-YYYY):")
             return R_START
@@ -157,7 +161,7 @@ async def rest_reason(update: Update, context: ContextTypes.DEFAULT_TYPE):
     display_range = f"{start_date.strftime('%d-%m-%Y')} to {end_date.strftime('%d-%m-%Y')}"
     
     async with aiosqlite.connect(DB_PATH) as db:
-        async with db.execute("SELECT full_name FROM members WHERE telegram_id = ?", (telegram_id,)) as cursor:
+        async with db.execute("SELECT full_name, codename FROM members WHERE telegram_id = ?", (telegram_id,)) as cursor:
             user = await cursor.fetchone()
             
         await db.execute(
@@ -169,6 +173,9 @@ async def rest_reason(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Trigger auto-sync so if start_date is today, status changes immediately!
     await sync_rest_status_job(context)
     
+    member_name = user[0] if user else 'Unknown'
+    member_codename = user[1] if user else '-'
+    
     # Notify admin group & owner
     notify_targets = [cid for cid in [ADMIN_GID, OWNER_ID] if cid]
     for chat_id in notify_targets:
@@ -177,7 +184,8 @@ async def rest_reason(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 chat_id=chat_id,
                 text=f"🏖️ *Rest Request Received*\n"
                      f"━━━━━━━━━━━━━━━━━━\n"
-                     f"*Name:* {user[0] if user else 'Unknown'}\n"
+                     f"*Name:* {member_name}\n"
+                     f"*Codename:* {member_codename}\n"
                      f"*Dates:* {display_range} ({duration} days)\n"
                      f"*Reason:* {reason}",
                 parse_mode="Markdown"
@@ -202,7 +210,7 @@ async def set_active(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     async with aiosqlite.connect(DB_PATH) as db:
         # Cek status saat ini
-        async with db.execute("SELECT status, full_name FROM members WHERE telegram_id = ?", (telegram_id,)) as cursor:
+        async with db.execute("SELECT status, full_name, codename FROM members WHERE telegram_id = ?", (telegram_id,)) as cursor:
             user = await cursor.fetchone()
             
         if not user or user[0] != 'Rest':
@@ -210,6 +218,7 @@ async def set_active(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
         
         full_name = user[1] or "Member"
+        codename = user[2] or "-"
             
         # Potong durasi log terakhir agar cron job besok tidak membuat mereka Rest lagi
         async with db.execute("SELECT id, leave_date FROM leave_logs WHERE telegram_id = ? ORDER BY id DESC LIMIT 1", (telegram_id,)) as cursor:
@@ -219,7 +228,7 @@ async def set_active(update: Update, context: ContextTypes.DEFAULT_TYPE):
             log_id, leave_date = log
             if '|' in leave_date:
                 start_str, _ = leave_date.split('|')
-                yesterday_str = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
+                yesterday_str = (datetime.now(WIB) - timedelta(days=1)).strftime('%Y-%m-%d')
                 new_leave_date = f"{start_str}|{yesterday_str}"
                 await db.execute("UPDATE leave_logs SET leave_date = ? WHERE id = ?", (new_leave_date, log_id))
                 
@@ -238,6 +247,7 @@ async def set_active(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 text=f"✅ *Rest Ended (Manual)*\n"
                      f"━━━━━━━━━━━━━━━━━━\n"
                      f"*Name:* {full_name}\n"
+                     f"*Codename:* {codename}\n"
                      f"Manually set status back to *Active* via /active.",
                 parse_mode="Markdown"
             )
